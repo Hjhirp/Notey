@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
+import TermsAndConditions from "./TermsAndConditions";
+import PrivacyPolicy from "./PrivacyPolicy";
 
 interface AuthProps {
   session: Session | null;
@@ -12,10 +14,24 @@ export default function Auth({ session }: AuthProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const signIn = async () => {
     if (!email.trim()) {
       setError("Please enter your email address");
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError("Please accept the Terms and Conditions to continue");
+      return;
+    }
+
+    if (!acceptedPrivacy) {
+      setError("Please accept the Privacy Policy to continue");
       return;
     }
 
@@ -78,10 +94,57 @@ export default function Auth({ session }: AuthProps) {
               {message}
             </div>
           )}
+
+          {/* Terms and Conditions Checkbox */}
+          <div className="space-y-3">
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="terms-checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 text-notey-orange border-gray-300 rounded focus:ring-notey-orange"
+              />
+              <div className="text-sm text-slate-600">
+                <label htmlFor="terms-checkbox" className="cursor-pointer">
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowTerms(true)}
+                    className="text-notey-orange hover:underline font-medium"
+                  >
+                    Terms and Conditions
+                  </button>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="privacy-checkbox"
+                checked={acceptedPrivacy}
+                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 text-notey-orange border-gray-300 rounded focus:ring-notey-orange"
+              />
+              <div className="text-sm text-slate-600">
+                <label htmlFor="privacy-checkbox" className="cursor-pointer">
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacy(true)}
+                    className="text-notey-orange hover:underline font-medium"
+                  >
+                    Privacy Policy
+                  </button>
+                </label>
+              </div>
+            </div>
+          </div>
           
           <button
             onClick={signIn}
-            disabled={isLoading || !email.trim()}
+            disabled={isLoading || !email.trim() || !acceptedTerms || !acceptedPrivacy}
             className="w-full bg-notey-orange text-white font-semibold py-3 px-6 rounded-xl text-base
                        hover:bg-notey-orange/90 focus:outline-none focus:ring-2 focus:ring-notey-orange focus:ring-offset-2
                        transition-all duration-200 shadow-sm min-h-[48px] touch-manipulation
@@ -97,6 +160,18 @@ export default function Auth({ session }: AuthProps) {
             )}
           </button>
         </div>
+        
+        {/* Terms and Conditions Modal */}
+        <TermsAndConditions 
+          isOpen={showTerms} 
+          onClose={() => setShowTerms(false)} 
+        />
+        
+        {/* Privacy Policy Modal */}
+        <PrivacyPolicy 
+          isOpen={showPrivacy} 
+          onClose={() => setShowPrivacy(false)} 
+        />
       </div>
     );
   }
