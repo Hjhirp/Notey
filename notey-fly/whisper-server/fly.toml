@@ -1,0 +1,37 @@
+# fly.toml app configuration file generated for notey-whisper on 2025-08-06T13:42:29-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'notey-whisper'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  PYTHONUNBUFFERED = "1"
+  PYTHONIOENCODING = "utf-8"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+  
+  # Increase timeout for longer audio processing (values in seconds)
+  [http_service.http_options]
+    response_timeout = 600  # 10 minutes
+    idle_timeout = 300      # 5 minutes
+
+# Increase machine resources for better performance
+[[vm]]
+  memory = '8gb'
+  cpu_kind = 'performance'
+  cpus = 2  # Increased from 1 for better parallel processing
+  
+# Add volume for persistent storage if needed
+# [[mounts]]
+#   source = "whisper_data"
+#   destination = "/app/downloads"

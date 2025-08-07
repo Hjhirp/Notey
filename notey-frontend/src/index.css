@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  body {
+    margin: 0;
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color: #4A2C18; /* Notey dark brown */
+    background-color: #FFFFFF;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Ensure proper touch targets on mobile */
+  button, [role="button"], input[type="submit"], input[type="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Improve text readability on small screens */
+  @media (max-width: 640px) {
+    body {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+  }
+}
+
+@layer utilities {
+  /* Touch-friendly interaction utilities */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Line clamping utility for text truncation */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  /* Scrollbar styling for webkit browsers */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #F28C38 #FCEED9;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #FCEED9;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #F28C38;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #E07B2A;
+  }
+
+  /* Enhanced animations with GPU acceleration */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    will-change: transform, opacity;
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+    will-change: transform;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background-size: 200px 100%;
+    will-change: background-position;
+  }
+
+  /* Performance optimization utilities */
+  .transform-gpu {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+
+  .filter {
+    filter: brightness(1);
+  }
+
+  /* Mobile-specific optimizations */
+  @media (max-width: 768px) {
+    .animate-fade-in {
+      animation-duration: 0.3s;
+    }
+    
+    .animate-slide-in {
+      animation-duration: 0.4s;
+    }
+    
+    /* Reduce motion for better performance on mobile */
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fade-in,
+      .animate-slide-in,
+      .animate-slide-up,
+      .animate-pulse-slow {
+        animation: none;
+      }
+    }
+  }
+
+  /* Network-aware optimizations */
+  @media (prefers-reduced-data: reduce) {
+    .animate-shimmer {
+      animation: none;
+    }
+    
+    /* Simplified animations for slower connections */
+    .animate-fade-in {
+      animation-duration: 0.2s;
+    }
+  }
+
+  /* Enhanced loading states */
+  .loading-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Touch-optimized interactions */
+  @media (hover: none) and (pointer: coarse) {
+    .group:hover .group-hover\:scale-110 {
+      transform: scale(1);
+    }
+    
+    .hover\:scale-\[1\.02\]:hover {
+      transform: scale(1);
+    }
+  }
+
+  /* Border width utilities */
+  .border-3 {
+    border-width: 3px;
+  }
+
+  /* Enhanced focus states */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-notey-orange focus:ring-offset-2 focus:ring-offset-white;
+  }
+
+  /* Consistent button styles */
+  .btn-primary {
+    @apply bg-notey-orange text-white font-semibold py-3 px-6 rounded-lg hover:bg-notey-orange/90 focus-ring transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-notey-pink text-notey-brown font-semibold py-3 px-6 rounded-lg hover:bg-notey-pink/90 focus-ring transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-sm;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-xl shadow-lg border border-notey-orange/20 overflow-hidden;
+  }
+
+  .card-header {
+    @apply bg-gradient-to-r from-notey-orange to-notey-orange/80 px-6 py-4;
+  }
+
+  .card-content {
+    @apply p-6;
+  }
+
+  /* Typography utilities */
+  .text-heading {
+    @apply text-notey-brown font-semibold leading-tight;
+  }
+
+  .text-body {
+    @apply text-notey-brown/80 leading-relaxed;
+  }
+
+  .text-caption {
+    @apply text-notey-brown/60 text-sm;
+  }
+}
