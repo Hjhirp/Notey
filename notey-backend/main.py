@@ -18,7 +18,7 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "https://notey-frontend.vercel.app",  # Add your Vercel frontend URL
+    "https://notey-cmvf.vercel.app",  # Your actual Vercel frontend URL
     "https://*.vercel.app",  # Allow all Vercel preview deployments
 ]
 
