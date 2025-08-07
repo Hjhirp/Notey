@@ -32,7 +32,7 @@ function App() {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: SupabaseSession | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setSession(session);
       setIsLoading(false);
     });

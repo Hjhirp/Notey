@@ -405,7 +405,7 @@ export default function PhotoButton({
   }, [uploadState.isUploading, uploadState.success]);
 
   const getButtonClassName = useCallback(() => {
-    let baseClasses = "w-full px-4 py-4 sm:py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-notey-cream transition-all duration-200 border text-base min-h-[48px] touch-manipulation flex items-center justify-center";
+    const baseClasses = "w-full px-4 py-4 sm:py-2 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-notey-cream transition-all duration-200 border text-base min-h-[48px] touch-manipulation flex items-center justify-center";
     
     if (uploadState.isUploading) {
       return `${baseClasses} bg-notey-orange/50 text-notey-brown border-notey-orange/30 cursor-not-allowed`;

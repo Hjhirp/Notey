@@ -316,7 +316,7 @@ export default function Replay({
           
           {eventData?.photos && eventData.photos.length > 0 ? (
             <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-              {eventData.photos.map((photo: any, idx: number) => (
+              {eventData.photos.map((photo: Photo, idx: number) => (
                 <div 
                   key={idx} 
                   className="bg-notey-cream/50 rounded-lg overflow-hidden border border-notey-orange/20 hover:border-notey-orange/40 transition-all duration-200 group hover:shadow-md"

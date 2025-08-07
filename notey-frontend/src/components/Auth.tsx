@@ -7,7 +7,7 @@ interface AuthProps {
   setSession: (session: Session | null) => void;
 }
 
-export default function Auth({ session, setSession: _ }: AuthProps) {
+export default function Auth({ session }: AuthProps) {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,7 +31,7 @@ export default function Auth({ session, setSession: _ }: AuthProps) {
         setMessage("Check your email for a login link! 📧");
         setEmail(""); // Clear email on success
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

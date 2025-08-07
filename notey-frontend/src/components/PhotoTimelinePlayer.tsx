@@ -256,6 +256,7 @@ export default function PhotoTimelinePlayer({
         clearInterval(intervalRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, updateVisiblePhotos]);
 
   // Enhanced cleanup and cache management
