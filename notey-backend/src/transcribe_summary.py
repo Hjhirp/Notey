@@ -107,10 +107,9 @@ async def update_audio_chunk_with_results(audio_url: str, transcript: str, summa
                 }
             )
             res.raise_for_status()
-            print(f"✅ Successfully updated audio_chunks for URL: {audio_url}")
             
     except Exception as e:
-        print(f"❌ Failed to update database: {str(e)}")
+        # Failed to update database
         # Log the error but don't fail the entire operation
         # The transcript and summary are still returned to the user
 

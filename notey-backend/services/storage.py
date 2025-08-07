@@ -59,7 +59,6 @@ async def upload_photo_to_supabase(event_id: str, file, offset: float, bucket="p
                 raise Exception(f"Upload failed with status {res.status_code}: {error_detail}")
 
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/{bucket}/{filename}"
-        print(f"✅ Photo uploaded successfully (fallback): {public_url}")
         return public_url
 
 
@@ -78,23 +77,19 @@ async def delete_storage_file(file_url: str, user_id: str) -> bool:
         # Extract bucket and file path from URL
         # URL format: {SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}
         if "/storage/v1/object/public/" not in file_url:
-            print(f"❌ Invalid storage URL format: {file_url}")
             return False
             
         url_parts = file_url.split("/storage/v1/object/public/", 1)
         if len(url_parts) != 2:
-            print(f"❌ Could not parse storage URL: {file_url}")
             return False
             
         path_part = url_parts[1]  # bucket/path
         bucket_and_path = path_part.split("/", 1)
         if len(bucket_and_path) != 2:
-            print(f"❌ Could not extract bucket and path from: {path_part}")
             return False
             
         bucket, file_path = bucket_and_path
         
-        print(f"🗑️ Deleting storage file: bucket={bucket}, path={file_path}")
         
         # Include user_id in headers for RLS compliance
         delete_headers = {
@@ -109,17 +104,13 @@ async def delete_storage_file(file_url: str, user_id: str) -> bool:
             )
             
             if res.status_code in [200, 204]:
-                print(f"✅ Storage file deleted successfully: {file_path}")
                 return True
             elif res.status_code == 404:
-                print(f"⚠️ Storage file not found (already deleted?): {file_path}")
                 return True  # Consider this success
             else:
-                print(f"❌ Storage deletion failed: {res.status_code} - {res.text}")
                 return False
                 
     except Exception as e:
-        print(f"❌ Error deleting storage file {file_url}: {str(e)}")
         return False
 
 
@@ -135,7 +126,6 @@ async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
         bool: True if all deletions were successful
     """
     try:
-        print(f"🗑️ Deleting storage files for event {event_id}")
         
         # Delete audio files
         audio_success = await delete_storage_folder_supabase("audio", f"{event_id}/", user_id)
@@ -146,7 +136,7 @@ async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
         return audio_success and photo_success
         
     except Exception as e:
-        print(f"❌ Error deleting storage files for event {event_id}: {str(e)}")
+        pass
         return False
 
 
@@ -180,22 +170,20 @@ async def delete_storage_folder_supabase(bucket: str, prefix: str, user_id: str)
     """
     supabase = get_user_supabase_client(user_id)
     try:
-        print(f"🗑️ Listing files in {bucket}/{prefix}")
         
         # List files in the folder
         list_result = supabase.storage.from_(bucket).list(prefix)
         
         if hasattr(list_result, 'error') and list_result.error:
-            print(f"❌ Failed to list files in {bucket}/{prefix}: {list_result.error}")
+            pass
             return False
             
         files = list_result if isinstance(list_result, list) else []
         
         if not files:
-            print(f"✅ No files found in {bucket}/{prefix}")
+            pass
             return True
             
-        print(f"🗑️ Found {len(files)} files to delete in {bucket}/{prefix}")
         
         # Delete files in batches
         file_paths = []
@@ -213,15 +201,14 @@ async def delete_storage_folder_supabase(bucket: str, prefix: str, user_id: str)
             delete_result = supabase.storage.from_(bucket).remove(file_paths)
             
             if hasattr(delete_result, 'error') and delete_result.error:
-                print(f"❌ Failed to delete files in {bucket}/{prefix}: {delete_result.error}")
+                pass
                 return False
             
-            print(f"✅ Successfully deleted {len(file_paths)} files from {bucket}/{prefix}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error deleting folder {bucket}/{prefix}: {str(e)}")
+        pass
         # Fallback to direct API approach
         return await delete_storage_folder_fallback(bucket, prefix, user_id)
 
@@ -253,16 +240,15 @@ async def delete_storage_folder_fallback(bucket: str, prefix: str, user_id: str)
             )
             
             if list_res.status_code != 200:
-                print(f"❌ Failed to list files in {bucket}/{prefix}: {list_res.status_code}")
+                pass
                 return False
                 
             files = list_res.json()
             if not files:
-                print(f"✅ No files found in {bucket}/{prefix}")
+                pass
                 return True
                 
-            print(f"🗑️ Found {len(files)} files to delete in {bucket}/{prefix}")
-            
+                
             # Delete each file
             success_count = 0
             for file_info in files:
@@ -277,15 +263,14 @@ async def delete_storage_folder_fallback(bucket: str, prefix: str, user_id: str)
                 
                 if delete_res.status_code in [200, 204, 404]:
                     success_count += 1
-                    print(f"✅ Deleted {bucket}/{file_path}")
+                    pass
                 else:
-                    print(f"❌ Failed to delete {bucket}/{file_path}: {delete_res.status_code}")
+                    pass
             
-            print(f"✅ Successfully deleted {success_count}/{len(files)} files from {bucket}/{prefix}")
             return success_count == len(files)
             
     except Exception as e:
-        print(f"❌ Error deleting folder {bucket}/{prefix}: {str(e)}")
+        pass
         return False
 
 
@@ -301,7 +286,6 @@ async def delete_event_storage_files_with_user_token(event_id: str, user_context
         bool: True if all deletions were successful
     """
     try:
-        print(f"🗑️ Deleting storage files for event {event_id} with user token")
         
         # Create headers with user's JWT token
         user_headers = {
@@ -318,7 +302,7 @@ async def delete_event_storage_files_with_user_token(event_id: str, user_context
         return audio_success and photo_success
         
     except Exception as e:
-        print(f"❌ Error deleting storage files for event {event_id}: {str(e)}")
+        pass
         return False
 
 
@@ -335,7 +319,6 @@ async def delete_storage_folder_with_user_token(bucket: str, prefix: str, user_h
         bool: True if deletion was successful
     """
     try:
-        print(f"🗑️ Deleting files in {bucket}/{prefix} with user token")
         
         async with httpx.AsyncClient() as client:
             # List files in the folder first
@@ -346,16 +329,15 @@ async def delete_storage_folder_with_user_token(bucket: str, prefix: str, user_h
             )
             
             if list_res.status_code != 200:
-                print(f"❌ Failed to list files in {bucket}/{prefix}: {list_res.status_code} - {list_res.text}")
+                pass
                 return False
                 
             files = list_res.json()
             if not files:
-                print(f"✅ No files found in {bucket}/{prefix}")
+                pass
                 return True
                 
-            print(f"🗑️ Found {len(files)} files to delete in {bucket}/{prefix}")
-            
+                
             # Delete each file
             success_count = 0
             for file_info in files:
@@ -373,13 +355,12 @@ async def delete_storage_folder_with_user_token(bucket: str, prefix: str, user_h
                 
                 if delete_res.status_code in [200, 204, 404]:
                     success_count += 1
-                    print(f"✅ Deleted {bucket}/{file_path}")
+                    pass
                 else:
-                    print(f"❌ Failed to delete {bucket}/{file_path}: {delete_res.status_code} - {delete_res.text}")
+                    pass
             
-            print(f"✅ Successfully deleted {success_count}/{len(files)} files from {bucket}/{prefix}")
             return success_count == len(files)
             
     except Exception as e:
-        print(f"❌ Error deleting folder {bucket}/{prefix}: {str(e)}")
+        pass
         return False

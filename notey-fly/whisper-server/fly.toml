@@ -27,7 +27,7 @@ primary_region = 'sjc'
 
 # Increase machine resources for better performance
 [[vm]]
-  memory = '8gb'
+  memory = '16gb'
   cpu_kind = 'performance'
   cpus = 2  # Increased from 1 for better parallel processing
   
