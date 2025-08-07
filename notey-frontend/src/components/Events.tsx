@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import config from "../config";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = config.BACKEND_URL;
 
 interface Event {
   id: string;

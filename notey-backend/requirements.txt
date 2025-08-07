@@ -20,7 +20,11 @@ pydantic>=2.5.0
 supabase>=2.3.0
 
 # File handling
+aiofiles>=24.1.0
 pillow>=10.0.0
 
 # Date and time handling
 python-dateutil>=2.8.0
+
+# Additional dependencies found in the codebase
+asyncpg>=0.30.0

@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import PhotoTimelinePlayer from "./PhotoTimelinePlayer";
+import config from "../config";
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = config.BACKEND_URL;
 
 interface AudioChunk {
   id: string;

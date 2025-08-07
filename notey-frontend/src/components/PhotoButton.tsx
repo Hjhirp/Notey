@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
+import config from '../config';
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = config.BACKEND_URL;
 
 interface PhotoButtonProps {
   startTime: number;
