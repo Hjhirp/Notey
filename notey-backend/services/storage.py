@@ -137,14 +137,11 @@ async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
     try:
         print(f"🗑️ Deleting storage files for event {event_id}")
         
-        # Use Supabase client for proper RLS handling
-        supabase = get_user_supabase_client(user_id)
-        
         # Delete audio files
-        audio_success = await delete_storage_folder_supabase(supabase, "audio", f"{event_id}/", user_id)
+        audio_success = await delete_storage_folder_supabase("audio", f"{event_id}/", user_id)
 
         # Delete photo files (using 'photos' bucket per RLS policy)
-        photo_success = await delete_storage_folder_supabase(supabase, "photos", f"{event_id}/", user_id)
+        photo_success = await delete_storage_folder_supabase("photos", f"{event_id}/", user_id)
         
         return audio_success and photo_success
         
@@ -283,6 +280,102 @@ async def delete_storage_folder_fallback(bucket: str, prefix: str, user_id: str)
                     print(f"✅ Deleted {bucket}/{file_path}")
                 else:
                     print(f"❌ Failed to delete {bucket}/{file_path}: {delete_res.status_code}")
+            
+            print(f"✅ Successfully deleted {success_count}/{len(files)} files from {bucket}/{prefix}")
+            return success_count == len(files)
+            
+    except Exception as e:
+        print(f"❌ Error deleting folder {bucket}/{prefix}: {str(e)}")
+        return False
+
+
+async def delete_event_storage_files_with_user_token(event_id: str, user_context) -> bool:
+    """
+    Delete all storage files associated with an event using user's JWT token for RLS compliance
+    
+    Args:
+        event_id: The event ID
+        user_context: UserContext object containing user_id and JWT token
+        
+    Returns:
+        bool: True if all deletions were successful
+    """
+    try:
+        print(f"🗑️ Deleting storage files for event {event_id} with user token")
+        
+        # Create headers with user's JWT token
+        user_headers = {
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {user_context.token}",
+        }
+        
+        # Delete audio files
+        audio_success = await delete_storage_folder_with_user_token("audio", f"{event_id}/", user_headers)
+
+        # Delete photo files
+        photo_success = await delete_storage_folder_with_user_token("photos", f"{event_id}/", user_headers)
+        
+        return audio_success and photo_success
+        
+    except Exception as e:
+        print(f"❌ Error deleting storage files for event {event_id}: {str(e)}")
+        return False
+
+
+async def delete_storage_folder_with_user_token(bucket: str, prefix: str, user_headers: dict) -> bool:
+    """
+    Delete all files in a storage folder using user's JWT token
+    
+    Args:
+        bucket: The storage bucket name
+        prefix: The folder prefix (e.g., "event_id/")
+        user_headers: Headers containing user's JWT token
+        
+    Returns:
+        bool: True if deletion was successful
+    """
+    try:
+        print(f"🗑️ Deleting files in {bucket}/{prefix} with user token")
+        
+        async with httpx.AsyncClient() as client:
+            # List files in the folder first
+            list_res = await client.get(
+                f"{SUPABASE_URL}/storage/v1/object/list/{bucket}",
+                headers=user_headers,
+                params={"prefix": prefix}
+            )
+            
+            if list_res.status_code != 200:
+                print(f"❌ Failed to list files in {bucket}/{prefix}: {list_res.status_code} - {list_res.text}")
+                return False
+                
+            files = list_res.json()
+            if not files:
+                print(f"✅ No files found in {bucket}/{prefix}")
+                return True
+                
+            print(f"🗑️ Found {len(files)} files to delete in {bucket}/{prefix}")
+            
+            # Delete each file
+            success_count = 0
+            for file_info in files:
+                file_name = file_info.get("name")
+                if not file_name:
+                    continue
+                
+                # Construct full file path
+                file_path = f"{prefix}{file_name}" if not file_name.startswith(prefix) else file_name
+                    
+                delete_res = await client.delete(
+                    f"{SUPABASE_URL}/storage/v1/object/{bucket}/{file_path}",
+                    headers=user_headers
+                )
+                
+                if delete_res.status_code in [200, 204, 404]:
+                    success_count += 1
+                    print(f"✅ Deleted {bucket}/{file_path}")
+                else:
+                    print(f"❌ Failed to delete {bucket}/{file_path}: {delete_res.status_code} - {delete_res.text}")
             
             print(f"✅ Successfully deleted {success_count}/{len(files)} files from {bucket}/{prefix}")
             return success_count == len(files)

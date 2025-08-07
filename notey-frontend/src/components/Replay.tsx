@@ -29,9 +29,11 @@ interface EventData {
 
 export default function Replay({ 
   eventId, 
+  session,
   onEventDeleted 
 }: { 
   eventId: string;
+  session: any;
   onEventDeleted?: (id: string) => void;
 }) {
   const [eventData, setEventData] = useState<EventData | null>(null);
@@ -109,10 +111,18 @@ export default function Replay({
   };
 
   const deleteEvent = async () => {
+    if (!session?.access_token) {
+      alert('Authentication required. Please refresh the page and try again.');
+      return;
+    }
+    
     setIsDeleting(true);
     try {
       const res = await fetch(`${BACKEND_URL}/events/${eventId}`, {
         method: 'DELETE',
+        headers: { 
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (!res.ok) {

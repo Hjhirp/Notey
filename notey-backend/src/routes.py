@@ -18,15 +18,15 @@ class StartEventRequest(BaseModel):
 
 
 @router.post("/events/start")
-async def start_event(request: StartEventRequest, user_id: str = Depends(verify_supabase_token)):
+async def start_event(request: StartEventRequest, user_context = Depends(verify_supabase_token)):
     event_id = str(uuid.uuid4())
     # Count prior events for the user and create hash
     count = 1  # Replace with real count from DB
-    hash_id = generate_event_hash(user_id, count)
+    hash_id = generate_event_hash(user_context.user_id, count)
 
     payload = {
         "id": event_id,
-        "user_id": user_id,
+        "user_id": user_context.user_id,
         "title": request.title,
         "unique_hash": hash_id
     }
@@ -60,7 +60,7 @@ async def upload_audio(
 
 
 @router.post("/events/{event_id}/photo")
-async def upload_photo(event_id: str, offset: float = Form(...), file: UploadFile = File(...), user_id: str = Depends(verify_supabase_token)):
+async def upload_photo(event_id: str, offset: float = Form(...), file: UploadFile = File(...), user_context = Depends(verify_supabase_token)):
     import time
     import logging
     
@@ -105,7 +105,7 @@ async def upload_photo(event_id: str, offset: float = Form(...), file: UploadFil
     try:
         # Verify event exists and user has permission with timeout
         try:
-            has_permission = await database.verify_event_ownership(event_id, user_id)
+            has_permission = await database.verify_event_ownership(event_id, user_context.user_id)
             if not has_permission:
                 raise HTTPException(status_code=404, detail="Event not found or access denied")
         except HTTPException:
@@ -173,8 +173,8 @@ async def get_event_details(event_id: str):
 
 
 @router.get("/events")
-async def get_all_events(user_id: str = Depends(verify_supabase_token)):
-    return await database.get_user_events(user_id)
+async def get_all_events(user_context = Depends(verify_supabase_token)):
+    return await database.get_user_events(user_context.user_id)
 
 
 @router.get("/audio-chunks")
@@ -208,7 +208,7 @@ async def delete_event(event_id: str, user_context = Depends(verify_supabase_tok
     
     try:
         print(f"🗑️ DELETE request for event {event_id} by user {user_context.user_id}")
-        success = await database.delete_event_with_context(event_id, user_context)
+        success = await database.delete_event_with_user_token(event_id, user_context)
         if not success:
             print(f"❌ Delete failed: Event {event_id} not found or unauthorized")
             raise HTTPException(

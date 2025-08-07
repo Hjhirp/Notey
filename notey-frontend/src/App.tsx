@@ -160,7 +160,7 @@ function App() {
                   <div className="max-w-4xl mx-auto">
                     {selectedEventId ? (
                       <div className="animate-fade-in">
-                        <Replay eventId={selectedEventId} onEventDeleted={handleEventDeleted} />
+                        <Replay eventId={selectedEventId} session={session} onEventDeleted={handleEventDeleted} />
                       </div>
                     ) : (
                       <div className="text-center py-20">

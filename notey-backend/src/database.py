@@ -1,5 +1,5 @@
 import httpx
-from .config import SUPABASE_URL, get_supabase_headers, get_supabase_headers_read
+from .config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, get_supabase_headers, get_supabase_headers_read
 
 
 async def create_event(event_data: dict) -> dict:
@@ -206,3 +206,160 @@ async def delete_event(event_id: str, user_id: str) -> bool:
             if hasattr(e, 'response'):
                 print(f"❌ HTTP Response: {e.response.status_code} - {e.response.text}")
             raise e
+
+
+async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
+    """
+    Delete storage files (audio and photos) for an event
+    
+    Args:
+        event_id: The ID of the event
+        user_id: The ID of the user (for validation)
+        
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        # Import here to avoid circular imports
+        from services.storage import delete_event_storage_files as delete_storage_files
+        
+        # Delete files from Supabase Storage
+        success = await delete_storage_files(event_id, user_id)
+        
+        if success:
+            print(f"✅ Storage files deleted successfully for event {event_id}")
+        else:
+            print(f"⚠️ Some storage files may not have been deleted for event {event_id}")
+        
+        return success
+        
+    except Exception as e:
+        print(f"❌ Error deleting storage files for event {event_id}: {str(e)}")
+        return False
+
+
+async def delete_event_with_user_token(event_id: str, user_context) -> bool:
+    """
+    Delete an event and all associated data using the user's JWT token for RLS compliance
+    
+    Args:
+        event_id: The ID of the event to delete
+        user_context: UserContext object containing user_id and JWT token
+        
+    Returns:
+        bool: True if deletion was successful, False if event not found or not owned by user
+    """
+    
+    # Create headers with user's JWT token for RLS compliance
+    def get_user_headers():
+        return {
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {user_context.token}",
+            "Content-Type": "application/json"
+        }
+    
+    def get_user_headers_read():
+        return {
+            "apikey": SUPABASE_SERVICE_ROLE_KEY, 
+            "Authorization": f"Bearer {user_context.token}"
+        }
+    
+    # First verify ownership
+    if not await verify_event_ownership(event_id, user_context.user_id):
+        print(f"❌ Event {event_id} not found or user {user_context.user_id} doesn't own it")
+        return False
+    
+    async with httpx.AsyncClient() as client:
+        headers = get_user_headers()
+        
+        try:
+            print(f"🗑️ Starting deletion of event {event_id} with user token")
+            
+            # Get photos first to check what needs to be deleted
+            photos_check = await client.get(
+                f"{SUPABASE_URL}/rest/v1/photos?event_id=eq.{event_id}&select=id,photo_url",
+                headers=get_user_headers_read()
+            )
+            photos_check.raise_for_status()
+            photos_to_delete = photos_check.json()
+            print(f"📸 Found {len(photos_to_delete)} photos to delete")
+            
+            # Delete audio chunks first (due to foreign key constraints)
+            print(f"🎵 Deleting audio chunks for event {event_id}")
+            audio_res = await client.delete(
+                f"{SUPABASE_URL}/rest/v1/audio_chunks?event_id=eq.{event_id}",
+                headers=headers
+            )
+            if audio_res.status_code not in [200, 204]:
+                print(f"❌ Audio deletion failed: {audio_res.status_code} - {audio_res.text}")
+                audio_res.raise_for_status()
+            print(f"✅ Audio chunks deleted successfully")
+            
+            # Delete photos
+            if photos_to_delete:
+                print(f"📸 Deleting {len(photos_to_delete)} photos for event {event_id}")
+                photos_res = await client.delete(
+                    f"{SUPABASE_URL}/rest/v1/photos?event_id=eq.{event_id}",
+                    headers=headers
+                )
+                if photos_res.status_code not in [200, 204]:
+                    print(f"❌ Photos deletion failed: {photos_res.status_code} - {photos_res.text}")
+                    photos_res.raise_for_status()
+                print(f"✅ Photos deleted successfully")
+            
+            # Delete storage files (audio and photos) using user's token
+            print(f"🗂️ Deleting storage files for event {event_id}")
+            storage_success = await delete_event_storage_files_with_user_token(event_id, user_context)
+            if not storage_success:
+                print(f"⚠️ Some storage files may not have been deleted for event {event_id}")
+                # Don't fail the entire deletion for storage issues
+            
+            # Finally delete the event itself
+            print(f"📝 Deleting event {event_id}")
+            event_res = await client.delete(
+                f"{SUPABASE_URL}/rest/v1/events?id=eq.{event_id}&user_id=eq.{user_context.user_id}",
+                headers=headers
+            )
+            if event_res.status_code not in [200, 204]:
+                print(f"❌ Event deletion failed: {event_res.status_code} - {event_res.text}")
+                event_res.raise_for_status()
+            
+            print(f"✅ Event {event_id} deleted successfully")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error deleting event {event_id}: {str(e)}")
+            # Log more details about the error
+            if hasattr(e, 'response'):
+                print(f"❌ HTTP Response: {e.response.status_code} - {e.response.text}")
+            raise e
+
+
+async def delete_event_storage_files_with_user_token(event_id: str, user_context) -> bool:
+    """
+    Delete storage files using user's JWT token for RLS compliance
+    
+    Args:
+        event_id: The ID of the event
+        user_context: UserContext object containing user_id and JWT token
+        
+    Returns:
+        bool: True if deletion was successful, False otherwise
+    """
+    try:
+        # Import here to avoid circular imports
+        from services.storage import delete_event_storage_files_with_user_token as delete_storage_files
+        
+        # Delete files from Supabase Storage using user token
+        success = await delete_storage_files(event_id, user_context)
+        
+        if success:
+            print(f"✅ Storage files deleted successfully for event {event_id}")
+        else:
+            print(f"⚠️ Some storage files may not have been deleted for event {event_id}")
+        
+        return success
+        
+    except Exception as e:
+        print(f"❌ Error deleting storage files for event {event_id}: {str(e)}")
+        return False

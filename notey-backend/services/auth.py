@@ -9,6 +9,11 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
+class UserContext:
+    def __init__(self, user_id: str, token: str):
+        self.user_id = user_id
+        self.token = token
+
 async def verify_supabase_token(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid auth header")
@@ -20,6 +25,6 @@ async def verify_supabase_token(authorization: str = Header(...)):
         user_id = decoded.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="User ID not found in token")
-        return user_id
+        return UserContext(user_id, token)
     except jwt.DecodeError:
         raise HTTPException(status_code=401, detail="Invalid token")
