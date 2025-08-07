@@ -69,7 +69,6 @@ function App() {
                   className="w-12 h-12 object-contain"
                   onError={(e) => {
                     // Fallback to emoji if logo fails to load
-                    console.log('Hero logo failed to load, using fallback');
                     const target = e.target as HTMLImageElement;
                     target.outerHTML = '<span class="text-4xl">🎙️</span>';
                   }}

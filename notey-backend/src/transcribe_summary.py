@@ -112,6 +112,7 @@ async def update_audio_chunk_with_results(audio_url: str, transcript: str, summa
         # Failed to update database
         # Log the error but don't fail the entire operation
         # The transcript and summary are still returned to the user
+        pass
 
 
 async def transcribe_audio_only(audio_url: str) -> str:

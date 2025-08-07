@@ -156,7 +156,6 @@ export default function PhotoTimelinePlayer({
     setTimeout(() => {
       const photoElement = document.querySelector(`img[data-photo-id="${photoId}"]`) as HTMLImageElement;
       if (photoElement && photoElement.src) {
-        console.log(`Retrying photo load: ${photoId}`);
         setPhotoLoadingStates(prev => ({ ...prev, [photoId]: 'loading' }));
         const originalSrc = photoElement.src.split('?')[0];
         photoElement.src = `${originalSrc}?retry=${Date.now()}`;

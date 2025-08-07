@@ -18,13 +18,10 @@ export default function Navbar({ session, setSession }: NavbarProps) {
     fetch('/notey-small.png')
       .then(response => {
         if (response.ok) {
-          console.log('✅ Logo file is accessible');
         } else {
-          console.log('❌ Logo file not accessible:', response.status);
         }
       })
       .catch(error => {
-        console.log('❌ Error accessing logo file:', error);
       });
   }, []);
 
@@ -40,7 +37,6 @@ export default function Navbar({ session, setSession }: NavbarProps) {
               className="w-12 h-12 object-contain"
               onError={(e) => {
                 // Fallback to text logo if image fails to load
-                console.log('Logo failed to load, using fallback');
                 const target = e.target as HTMLImageElement;
                 target.outerHTML = '<div class="flex items-center justify-center w-12 h-12 bg-notey-orange rounded-lg"><span class="text-white text-xl font-bold">N</span></div>';
               }}

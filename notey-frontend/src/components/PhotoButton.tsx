@@ -140,7 +140,6 @@ export default function PhotoButton({
         // Implement intelligent retry logic with exponential backoff
         if (retryCount < MAX_RETRIES && (response.status >= 500 || response.status === 429)) {
           const delay = RETRY_DELAY_BASE * Math.pow(2, retryCount);
-          console.log(`Retrying upload in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
           
           setTimeout(() => {
             uploadPhoto(file, retryCount + 1);
@@ -168,7 +167,6 @@ export default function PhotoButton({
         });
       }
 
-      console.log("📸 Photo uploaded successfully:", result);
 
       // Clear success state after 2 seconds for better UX
       setTimeout(() => {
@@ -188,7 +186,6 @@ export default function PhotoButton({
       );
       
       if (isNetworkError && retryCount < MAX_RETRIES) {
-        console.log(`🔄 Retrying upload (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
         
         setUploadState(prev => ({ 
           ...prev, 

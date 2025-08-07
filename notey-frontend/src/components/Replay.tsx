@@ -51,7 +51,6 @@ export default function Replay({
     const fetchEventData = async () => {
       try {
         setLoading(true);
-        console.log("📡 Fetching event data for:", eventId);
 
         // Fetch basic event data (for photos, etc.)
         const eventRes = await fetch(`${BACKEND_URL}/events/${eventId}`);
@@ -60,21 +59,13 @@ export default function Replay({
 
         // Fetch audio chunks data (for transcript and summary)
         const chunksUrl = `${BACKEND_URL}/audio-chunks?event_id=${eventId}`;
-        console.log("🔗 Fetching chunks from URL:", chunksUrl);
         
         const chunksRes = await fetch(chunksUrl);
-        console.log("📥 Chunks response status:", chunksRes.status);
-        console.log("📥 Chunks response ok:", chunksRes.ok);
         
         const chunksJson = await chunksRes.json();
-        console.log("🎵 Raw audio chunks response:", chunksJson);
-        console.log("🎵 Is array:", Array.isArray(chunksJson));
-        console.log("🎵 Length:", chunksJson?.length);
         
         setAudioChunks(Array.isArray(chunksJson) ? chunksJson : []);
         
-        console.log("📄 Event data:", eventJson);
-        console.log("🎵 Audio chunks state set to:", Array.isArray(chunksJson) ? chunksJson : []);
         
       } catch (err) {
         console.error("❌ Replay fetch failed:", err);
@@ -160,10 +151,6 @@ export default function Replay({
     );
   }
 
-  console.log("🎧 Rendering replay for event:", eventId);
-  console.log("🎧 audioChunks state:", audioChunks);
-  console.log("🎧 audioChunks.length:", audioChunks.length);
-  console.log("🎧 eventData:", eventData);
 
   // Combine all transcripts for the scrollable section
   const fullTranscript = audioChunks

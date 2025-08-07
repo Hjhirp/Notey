@@ -173,9 +173,6 @@ async def delete_event(event_id: str, user_id: str) -> bool:
             
             # Delete storage files (audio and photos)
             storage_success = await delete_event_storage_files(event_id, user_id)
-            if not storage_success:
-                # Don't fail the entire deletion for storage issues
-            
             # Finally delete the event itself
             event_res = await client.delete(
                 f"{SUPABASE_URL}/rest/v1/events?id=eq.{event_id}&user_id=eq.{user_id}",
@@ -188,7 +185,6 @@ async def delete_event(event_id: str, user_id: str) -> bool:
             
         except Exception as e:
             # Log more details about the error
-            if hasattr(e, 'response'):
             raise e
 
 
@@ -210,8 +206,6 @@ async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
         # Delete files from Supabase Storage
         success = await delete_storage_files(event_id, user_id)
         
-        if success:
-        else:
         
         return success
         
@@ -247,14 +241,12 @@ async def delete_event_with_user_token(event_id: str, user_context) -> bool:
     
     # First verify ownership
     if not await verify_event_ownership(event_id, user_context.user_id):
-        print(f"❌ Event {event_id} not found or user {user_context.user_id} doesn't own it")
         return False
     
     async with httpx.AsyncClient() as client:
         headers = get_user_headers()
         
         try:
-            print(f"🗑️ Starting deletion of event {event_id} with user token")
             
             # Get photos first to check what needs to be deleted
             photos_check = await client.get(
@@ -283,9 +275,6 @@ async def delete_event_with_user_token(event_id: str, user_context) -> bool:
             
             # Delete storage files (audio and photos) using user's token
             storage_success = await delete_event_storage_files_with_user_token(event_id, user_context)
-            if not storage_success:
-                # Don't fail the entire deletion for storage issues
-            
             # Finally delete the event itself
             event_res = await client.delete(
                 f"{SUPABASE_URL}/rest/v1/events?id=eq.{event_id}&user_id=eq.{user_context.user_id}",
@@ -298,7 +287,6 @@ async def delete_event_with_user_token(event_id: str, user_context) -> bool:
             
         except Exception as e:
             # Log more details about the error
-            if hasattr(e, 'response'):
             raise e
 
 
@@ -320,8 +308,6 @@ async def delete_event_storage_files_with_user_token(event_id: str, user_context
         # Delete files from Supabase Storage using user token
         success = await delete_storage_files(event_id, user_context)
         
-        if success:
-        else:
         
         return success
         

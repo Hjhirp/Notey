@@ -68,7 +68,6 @@ export default function Recorder({ session }: { session: Session | null }) {
 
     newRecorder.onstart = () => {
       startTime.current = Date.now();
-      console.log("🎙️ Recording started");
     };
 
     newRecorder.onstop = async () => {
@@ -76,10 +75,8 @@ export default function Recorder({ session }: { session: Session | null }) {
         type: "audio/webm;codecs=opus",
       });
 
-      console.log("📦 Audio blob size:", audioBlob.size, "bytes");
 
       const durationSec = audioBlob.size / 4000;
-      console.log("📏 Estimated duration:", durationSec.toFixed(2), "seconds");
 
       if (durationSec < 1) {
         alert("⚠️ Recording too short. Try again.");
@@ -98,7 +95,6 @@ export default function Recorder({ session }: { session: Session | null }) {
             body: formData,
           });
 
-          console.log("✅ Audio uploaded. Photos at:", photoOffsets.current);
         } catch (error) {
           console.error("❌ Upload failed:", error);
         }
@@ -124,7 +120,6 @@ export default function Recorder({ session }: { session: Session | null }) {
 
   const stopRecording = () => {
     if (!recorder) return;
-    console.log("⏹ Stopping recording...");
     
     setIsProcessing(true);
     setFeedback({ type: 'info', message: 'Processing recording...' });
