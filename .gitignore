@@ -286,7 +286,6 @@ docker-compose.override.yml
 *.flac
 *.jpg
 *.jpeg
-*.png
 *.gif
 *.webp
 *.svg
