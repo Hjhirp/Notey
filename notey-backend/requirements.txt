@@ -1,7 +1,26 @@
-# Add your Python dependencies here
-google-generativeai
-python-dotenv
-fastapi
-pydantic
-requests
-httpx
+# FastAPI and web server dependencies
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# HTTP clients
+httpx>=0.25.0
+requests>=2.31.0
+
+# AI and ML
+google-generativeai>=0.3.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Supabase client
+supabase>=2.3.0
+
+# File handling
+pillow>=10.0.0
+
+# Date and time handling
+python-dateutil>=2.8.0

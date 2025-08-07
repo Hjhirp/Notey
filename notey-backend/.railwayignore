@@ -1,0 +1,24 @@
+# Ignore test files
+test_*.py
+*_test.py
+tests/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore development files
+.env
+.env.local
+.vscode/
+.idea/
+*.log
+
+# Ignore documentation
+README.md
+*.md
+docs/
+
+# Ignore validation and check scripts
+check_*.py
+validate_*.py
