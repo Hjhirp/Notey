@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { Analytics } from "@vercel/analytics/react";
 import Auth from "./components/Auth";
 import Recorder from "./components/Recorder";
 import Events from "./components/Events";
@@ -24,7 +25,7 @@ function App() {
         const { data } = await supabase.auth.getSession();
         setSession(data.session);
       } catch (error) {
-        console.error("Error getting session:", error);
+        console.error("Authentication error");
       } finally {
         setIsLoading(false);
       }
@@ -181,6 +182,7 @@ function App() {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 }

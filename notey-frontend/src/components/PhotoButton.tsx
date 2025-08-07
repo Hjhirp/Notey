@@ -74,6 +74,16 @@ export default function PhotoButton({
       return;
     }
 
+    // Ensure startTime is valid (not 0) - recording must have started
+    if (startTime === 0) {
+      setUploadState(prev => ({
+        ...prev,
+        error: "Please start recording before taking photos",
+        isUploading: false
+      }));
+      return;
+    }
+
     const offset = (Date.now() - startTime) / 1000;
     addPhotoOffset(offset);
 
@@ -174,7 +184,7 @@ export default function PhotoButton({
       }, 2000);
 
     } catch (error) {
-      console.error("❌ Photo upload failed:", error);
+      console.error("Photo upload failed");
       
       // Handle network errors with retry logic
       const isNetworkError = error instanceof Error && (
@@ -355,7 +365,7 @@ export default function PhotoButton({
       document.addEventListener('keydown', handleEscape);
 
     } catch (error) {
-      console.error('Camera access failed:', error);
+      console.error('Camera access failed');
       let errorMessage = 'Camera access denied or not available.';
       
       if (error instanceof Error) {

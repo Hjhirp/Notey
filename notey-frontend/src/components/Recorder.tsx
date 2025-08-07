@@ -96,7 +96,7 @@ export default function Recorder({ session }: { session: Session | null }) {
           });
 
         } catch (error) {
-          console.error("❌ Upload failed:", error);
+          console.error("Upload failed");
         }
       };
 
@@ -108,7 +108,7 @@ export default function Recorder({ session }: { session: Session | null }) {
       newRecorder.start();
       setFeedback({ type: 'success', message: 'Recording started successfully!' });
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error('Failed to start recording');
       setFeedback({ 
         type: 'error', 
         message: error instanceof Error ? error.message : 'Failed to start recording' 

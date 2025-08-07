@@ -48,7 +48,7 @@ export default function Events({
         setEvents(json);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load events');
-        console.error('Error fetching events:', err);
+        console.error('Failed to load events');
       } finally {
         setIsLoading(false);
       }
@@ -83,7 +83,7 @@ export default function Events({
       
       setShowDeleteConfirm(null);
     } catch (err) {
-      console.error('Error deleting event:', err);
+      console.error('Failed to delete event');
       setError(err instanceof Error ? err.message : 'Failed to delete event');
     } finally {
       setDeletingId(null);

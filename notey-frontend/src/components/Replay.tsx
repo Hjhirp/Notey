@@ -68,7 +68,7 @@ export default function Replay({
         
         
       } catch (err) {
-        console.error("❌ Replay fetch failed:", err);
+        console.error("Failed to load replay");
       } finally {
         setLoading(false);
       }
@@ -126,7 +126,7 @@ export default function Replay({
       
       setShowDeleteConfirm(false);
     } catch (err) {
-      console.error('Error deleting event:', err);
+      console.error('Failed to delete event');
       alert('Failed to delete event. Please try again.');
     } finally {
       setIsDeleting(false);

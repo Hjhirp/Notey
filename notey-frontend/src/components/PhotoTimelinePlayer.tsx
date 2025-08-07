@@ -229,7 +229,7 @@ export default function PhotoTimelinePlayer({
         });
       }
     } catch (error) {
-      console.error('PhotoTimelinePlayer: Error in updateVisiblePhotos:', error);
+      console.error('Photo timeline error');
     }
   }, [audioRef, sortedPhotos, shownPhotoIds, getPhotoId, handleSeekDetection, preloadPhoto]);
 
