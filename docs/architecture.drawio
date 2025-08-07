@@ -1,232 +1,90 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" modified="2025-08-07T00:00:00.000Z" agent="Notey Architecture" etag="abc123" version="24.0.0">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36" version="28.0.7">
   <diagram name="Notey System Architecture" id="architecture">
-    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+    <mxGraphModel dx="1052" dy="892" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
-        <!-- Title -->
-        <mxCell id="title" value="Notey - AI-Powered Audio Note Taking Platform" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="title" value="Notey - AI-Powered Audio Note Taking Platform" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="300" y="20" width="600" height="40" as="geometry" />
         </mxCell>
-        
-        <!-- User Layer -->
-        <mxCell id="user" value="👤 User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="user" value="User Interface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=16;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="40" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        
-        <!-- Frontend Layer -->
-        <mxCell id="frontend-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" vertex="1" parent="1">
+        <mxCell id="frontend-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" parent="1" vertex="1">
           <mxGeometry x="220" y="80" width="280" height="200" as="geometry" />
         </mxCell>
-        
-        <mxCell id="frontend-title" value="🖥️ Frontend (React + TypeScript)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="frontend-title" value="Frontend (React + TypeScript)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="230" y="90" width="260" height="20" as="geometry" />
         </mxCell>
-        
-        <mxCell id="auth-component" value="Auth.tsx\n🔐 Authentication" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="auth-component" value="Auth Component" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="240" y="120" width="100" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="recorder-component" value="Recorder.tsx\n🎤 Audio Recording" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="recorder-component" value="Audio Recorder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="360" y="120" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="photo-component" value="PhotoButton.tsx\n📷 Photo Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="photo-component" value="Photo Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="240" y="180" width="100" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="timeline-component" value="PhotoTimelinePlayer.tsx\n⏱️ Timeline Sync" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="timeline-component" value="Timeline Player" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="360" y="180" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="events-component" value="Events.tsx\n📝 Event Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="events-component" value="Event Management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
           <mxGeometry x="300" y="240" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <!-- Backend Layer -->
-        <mxCell id="backend-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=30;" vertex="1" parent="1">
+        <mxCell id="backend-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=30;" parent="1" vertex="1">
           <mxGeometry x="560" y="80" width="280" height="280" as="geometry" />
         </mxCell>
-        
-        <mxCell id="backend-title" value="⚙️ Backend (FastAPI + Python)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="backend-title" value="Backend (FastAPI + Python)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontStyle=1;" parent="1" vertex="1">
           <mxGeometry x="570" y="90" width="260" height="20" as="geometry" />
         </mxCell>
-        
-        <mxCell id="routes" value="routes.py\n🛣️ API Endpoints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="routes" value="API Routes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="580" y="120" width="100" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="auth-service" value="auth.py\n🔒 JWT Validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="auth-service" value="Authentication" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="700" y="120" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="storage-service" value="storage.py\n💾 File Upload" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="storage-service" value="File Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="580" y="180" width="100" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="database-service" value="database.py\n🗄️ Data Operations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="database-service" value="Database Operations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="700" y="180" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="summarizer" value="summarizer.py\n🤖 AI Summarization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="summarizer" value="AI Summarization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="580" y="240" width="100" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="transcribe-pipeline" value="transcribe_summary.py\n🎵 Audio Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="transcribe-pipeline" value="Audio Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="700" y="240" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <mxCell id="tasks" value="tasks.py\n⚡ Background Jobs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="tasks" value="Background Tasks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="1" vertex="1">
           <mxGeometry x="640" y="300" width="120" height="40" as="geometry" />
         </mxCell>
-        
-        <!-- External Services Layer -->
-        <mxCell id="whisper-service" value="🎙️ Whisper.cpp Service\n(Fly.io Docker)\n\n• Audio Transcription\n• FFmpeg Processing\n• File I/O Optimization\n• Error Handling" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffeec7;strokeColor=#ff9900;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="whisper-service" value="Whisper.cpp Service (Fly.io)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffeec7;strokeColor=#ff9900;fontSize=12;" parent="1" vertex="1">
           <mxGeometry x="900" y="80" width="180" height="120" as="geometry" />
         </mxCell>
-        
-        <mxCell id="supabase" value="🗄️ Supabase Platform\n\n• PostgreSQL Database\n• File Storage (S3-like)\n• Authentication (JWT)\n• Real-time Updates\n• REST API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="220" y="400" width="180" height="120" as="geometry" />
+        <mxCell id="supabase" value="Supabase Platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4edda;strokeColor=#28a745;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="390" y="510" width="180" height="120" as="geometry" />
         </mxCell>
-        
-        <mxCell id="gemini" value="🤖 Google Gemini AI\n\n• Text Summarization\n• Content Generation\n• Natural Language\n• Processing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#0066cc;fontSize=12;" vertex="1" parent="1">
-          <mxGeometry x="560" y="400" width="180" height="120" as="geometry" />
+        <mxCell id="gemini" value="Google Gemini AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#cce5ff;strokeColor=#0066cc;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="730" y="510" width="180" height="120" as="geometry" />
         </mxCell>
-        
-        <!-- Connections -->
-        <!-- User to Frontend -->
-        <mxCell id="user-frontend" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3333ff;strokeWidth=2;" edge="1" parent="1" source="user" target="frontend-container">
+        <mxCell id="user-frontend" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3333ff;strokeWidth=2;" parent="1" source="user" target="frontend-container" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Frontend to Backend -->
-        <mxCell id="frontend-backend" value="REST API\n(JSON)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff6600;strokeWidth=2;" edge="1" parent="1" source="frontend-container" target="backend-container">
+        <mxCell id="frontend-backend" value="REST API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff6600;strokeWidth=2;" parent="1" source="frontend-container" target="backend-container" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Backend to Whisper -->
-        <mxCell id="backend-whisper" value="HTTP POST\n(Audio URL)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#cc0000;strokeWidth=2;" edge="1" parent="1" source="backend-container" target="whisper-service">
+        <mxCell id="backend-whisper" value="HTTP POST" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#cc0000;strokeWidth=2;" parent="1" source="backend-container" target="whisper-service" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Backend to Supabase -->
-        <mxCell id="backend-supabase" value="REST API\n(PostgreSQL)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#009900;strokeWidth=2;" edge="1" parent="1" source="backend-container" target="supabase">
+        <mxCell id="backend-supabase" value="Database API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#009900;strokeWidth=2;" parent="1" source="backend-container" target="supabase" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Frontend to Supabase -->
-        <mxCell id="frontend-supabase" value="Auth + Storage\n(Direct)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#006600;strokeWidth=2;" edge="1" parent="1" source="frontend-container" target="supabase">
+        <mxCell id="frontend-supabase" value="Auth + Storage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#006600;strokeWidth=2;" parent="1" source="frontend-container" target="supabase" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Backend to Gemini -->
-        <mxCell id="backend-gemini" value="REST API\n(Text)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066cc;strokeWidth=2;" edge="1" parent="1" source="backend-container" target="gemini">
+        <mxCell id="backend-gemini" value="AI API" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0066cc;strokeWidth=2;" parent="1" source="backend-container" target="gemini" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
-        <!-- Data Flow Annotations -->
-        <mxCell id="flow1" value="1. User Records Audio" style="text;html=1;strokeColor=none;fillColor=#fffacd;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="200" width="120" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="flow2" value="2. Frontend Uploads\nto Backend" style="text;html=1;strokeColor=none;fillColor=#fffacd;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="520" y="40" width="100" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="flow3" value="3. Backend Stores\nin Supabase" style="text;html=1;strokeColor=none;fillColor=#fffacd;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="420" y="350" width="100" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="flow4" value="4. Background Job\nTranscribes Audio" style="text;html=1;strokeColor=none;fillColor=#fffacd;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="900" y="40" width="120" height="30" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="flow5" value="5. AI Generates\nSummary" style="text;html=1;strokeColor=none;fillColor=#fffacd;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="780" y="350" width="100" height="30" as="geometry" />
-        </mxCell>
-        
-        <!-- Technology Labels -->
-        <mxCell id="tech-frontend" value="Tech: React 19, TypeScript, Tailwind CSS, Vite" style="text;html=1;strokeColor=none;fillColor=#f0f0f0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=8;" vertex="1" parent="1">
-          <mxGeometry x="230" y="290" width="260" height="20" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="tech-backend" value="Tech: FastAPI, Python 3.9+, Pydantic, HTTPx, JWT" style="text;html=1;strokeColor=none;fillColor=#f0f0f0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=8;" vertex="1" parent="1">
-          <mxGeometry x="570" y="370" width="260" height="20" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="tech-whisper" value="Tech: Whisper.cpp, Docker, Fly.io" style="text;html=1;strokeColor=none;fillColor=#f0f0f0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=8;" vertex="1" parent="1">
-          <mxGeometry x="920" y="210" width="140" height="20" as="geometry" />
-        </mxCell>
-        
-        <!-- Legend -->
-        <mxCell id="legend-title" value="Legend:" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="40" y="560" width="60" height="20" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="legend-user" value="🔵 User Interface" style="text;html=1;strokeColor=#3333ff;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="580" width="100" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="legend-api" value="🟠 API Calls" style="text;html=1;strokeColor=#ff6600;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="595" width="100" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="legend-transcription" value="🔴 Transcription" style="text;html=1;strokeColor=#cc0000;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="610" width="100" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="legend-database" value="🟢 Database" style="text;html=1;strokeColor=#009900;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="625" width="100" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="legend-ai" value="🔵 AI Processing" style="text;html=1;strokeColor=#0066cc;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="40" y="640" width="100" height="15" as="geometry" />
-        </mxCell>
-        
-        <!-- Performance Notes -->
-        <mxCell id="perf-title" value="Performance Features:" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="200" y="560" width="140" height="20" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="perf1" value="• Background transcription processing" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="200" y="580" width="200" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="perf2" value="• Optimized Whisper.cpp with GPU support" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="200" y="595" width="220" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="perf3" value="• Real-time photo timeline synchronization" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="200" y="610" width="210" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="perf4" value="• Supabase edge functions for low latency" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="200" y="625" width="200" height="15" as="geometry" />
-        </mxCell>
-        
-        <!-- Security Notes -->
-        <mxCell id="security-title" value="Security Features:" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="500" y="560" width="120" height="20" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="security1" value="• JWT authentication via Supabase" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="500" y="580" width="180" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="security2" value="• File upload validation & size limits" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="500" y="595" width="180" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="security3" value="• CORS configuration" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="500" y="610" width="120" height="15" as="geometry" />
-        </mxCell>
-        
-        <mxCell id="security4" value="• Environment variable security" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;" vertex="1" parent="1">
-          <mxGeometry x="500" y="625" width="160" height="15" as="geometry" />
-        </mxCell>
-        
       </root>
     </mxGraphModel>
   </diagram>

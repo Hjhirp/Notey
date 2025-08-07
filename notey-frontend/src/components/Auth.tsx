@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
-
-interface Session {
-  access_token?: string;
-  user: {
-    email?: string;
-  };
-}
+import type { Session } from "@supabase/supabase-js";
 
 interface AuthProps {
   session: Session | null;

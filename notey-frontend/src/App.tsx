@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import Auth from "./components/Auth";
 import Recorder from "./components/Recorder";
 import Events from "./components/Events";
 import Replay from "./components/Replay";
 import Navbar from "./components/Navbar";
-
-interface Session {
-  access_token?: string;
-  user: {
-    email?: string;
-  };
-}
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -38,7 +32,7 @@ function App() {
 
     initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: SupabaseSession | null) => {
       setSession(session);
       setIsLoading(false);
     });

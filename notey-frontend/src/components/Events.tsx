@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 
 const BACKEND_URL = "http://localhost:8000";
 
@@ -6,13 +7,6 @@ interface Event {
   id: string;
   title?: string;
   started_at: string;
-}
-
-interface Session {
-  access_token?: string;
-  user: {
-    email?: string;
-  };
 }
 
 export default function Events({

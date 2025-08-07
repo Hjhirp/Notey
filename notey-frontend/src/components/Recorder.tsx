@@ -1,11 +1,8 @@
 import { useState, useRef } from "react";
+import type { Session } from "@supabase/supabase-js";
 import PhotoButton from "./PhotoButton";
 
 const BACKEND_URL = "http://localhost:8000";
-
-interface Session {
-  access_token?: string;
-}
 
 export default function Recorder({ session }: { session: Session | null }) {
   const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
