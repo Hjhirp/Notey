@@ -290,6 +290,8 @@ docker-compose.override.yml
 *.webp
 *.svg
 *.ico
+*.docx
+*.doc
 
 # Temporary audio/media downloads
 downloads/

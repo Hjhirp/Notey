@@ -200,3 +200,30 @@ async def transcribe_summary_endpoint(payload: AudioURL):
         "transcript": result.transcript,
         "summary": result.summary
     }
+
+@router.delete("/events/{event_id}")
+async def delete_event(event_id: str, user_context = Depends(verify_supabase_token)):
+    """Delete an event and all associated data"""
+    print(f"🚀 DELETE ROUTE CALLED: event_id={event_id}, user_id={user_context.user_id}")
+    
+    try:
+        print(f"🗑️ DELETE request for event {event_id} by user {user_context.user_id}")
+        success = await database.delete_event_with_context(event_id, user_context)
+        if not success:
+            print(f"❌ Delete failed: Event {event_id} not found or unauthorized")
+            raise HTTPException(
+                status_code=404,
+                detail="Event not found or you don't have permission to delete it"
+            )
+        print(f"✅ Delete successful for event {event_id}")
+        return {"message": "Event deleted successfully"}
+    except HTTPException as he:
+        print(f"❌ HTTP Exception in delete_event: {he.status_code} - {he.detail}")
+        raise
+    except Exception as e:
+        print(f"❌ Unexpected error deleting event {event_id}: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete event: {str(e)}"
+        )
