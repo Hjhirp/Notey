@@ -63,26 +63,34 @@ async def upsert_concepts(
         # Process each concept mention
         for mention in request.mentions:
             # Upsert the concept (create if doesn't exist, get ID if exists)
-            concept_data = {"name": mention.name}
+            concept_data = {
+                "name": mention.name,
+                "user_id": str(user_context.user_id)
+            }
             
             try:
-                # Try to insert the concept
+                # Try to insert the concept with user_id
                 concept_result = await supabase_client.insert(
                     table="concepts",
-                    data=concept_data
+                    data=concept_data,
+                    user_token=user_context.token
                 )
                 concept_id = concept_result[0]["id"]
                 
             except Exception:
-                # Concept already exists, get its ID
+                # Concept already exists for this user, get its ID
                 existing_concepts = await supabase_client.select(
                     table="concepts",
                     columns="id",
-                    filters={"name": f"eq.{mention.name}"}
+                    filters={
+                        "name": f"eq.{mention.name}",
+                        "user_id": f"eq.{user_context.user_id}"
+                    },
+                    user_token=user_context.token
                 )
                 
                 if not existing_concepts:
-                    logger.error(f"Failed to create or find concept: {mention.name}")
+                    logger.error(f"Failed to create or find concept for user: {mention.name}")
                     continue
                     
                 concept_id = existing_concepts[0]["id"]
@@ -93,7 +101,8 @@ async def upsert_concepts(
                 "concept_id": concept_id,
                 "score": mention.score,
                 "from_sec": mention.from_sec,
-                "to_sec": mention.to_sec
+                "to_sec": mention.to_sec,
+                "user_id": str(user_context.user_id)
             }
             
             try:
@@ -137,11 +146,14 @@ async def get_chunk_concepts(
                 detail="You don't have permission to view concepts for this chunk"
             )
         
-        # Get concepts with their relationships to this chunk
+        # Get concepts with their relationships to this chunk (user-specific)
         result = await supabase_client.select(
             table="chunk_concepts",
             columns="concepts(id,name),score,from_sec,to_sec,created_at",
-            filters={"chunk_id": f"eq.{chunk_id}"},
+            filters={
+                "chunk_id": f"eq.{chunk_id}",
+                "user_id": f"eq.{user_context.user_id}"
+            },
             order="score.desc",
             user_token=user_context.token
         )
@@ -171,10 +183,13 @@ async def delete_chunk_concepts(
                 detail="You don't have permission to delete concepts for this chunk"
             )
         
-        # Delete chunk_concepts relationships
+        # Delete chunk_concepts relationships (user-specific)
         success = await supabase_client.delete(
             table="chunk_concepts",
-            filters={"chunk_id": f"eq.{chunk_id}"},
+            filters={
+                "chunk_id": f"eq.{chunk_id}",
+                "user_id": f"eq.{user_context.user_id}"
+            },
             user_token=user_context.token
         )
         

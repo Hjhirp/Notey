@@ -7,6 +7,7 @@ from src.routes import router
 from src.routes_concepts import router as concepts_router
 from src.routes_graph import router as graph_router
 from src.routes_chat import router as chat_router
+from src.routes_chat_history import router as chat_history_router
 
 # Load environment variables
 load_dotenv()
@@ -53,3 +54,4 @@ app.include_router(router)
 app.include_router(concepts_router)
 app.include_router(graph_router)
 app.include_router(chat_router)
+app.include_router(chat_history_router)

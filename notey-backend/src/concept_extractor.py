@@ -30,31 +30,36 @@ async def extract_concepts_from_transcript(transcript: str) -> List[Dict[str, An
         
         # Craft a prompt that focuses on extracting meaningful concepts
         prompt = f"""
-Analyze the following transcript and extract the key concepts, topics, and important entities mentioned. 
-Focus on:
-- Technical terms and jargon
-- Product names and brands
-- Skills and competencies
-- Business concepts and methodologies
-- Important people, places, or organizations
-- Main topics discussed
+    Analyze the following transcript and extract the **key concepts, topics, and important entities** mentioned.  
 
-Return ONLY a JSON array of concepts with this exact format:
-[
-  {{"name": "concept name", "score": 4.5}},
-  {{"name": "another concept", "score": 3.2}}
-]
+    Focus on:  
+    - Technical terms and jargon  
+    - Product names and brands  
+    - Skills and competencies  
+    - Business concepts and methodologies  
+    - Important people, places, or organizations  
+    - Main topics discussed  
 
-Rules:
-- Use lowercase for concept names
-- Score from 1.0 to 5.0 based on importance/prominence in transcript
-- Maximum 5 concepts
-- No explanation, just the JSON array
-- Skip common words like "the", "and", "is", "of", etc.
+    **Formatting Rules:**  
+    1. **Normalize concept names:**  
+    - Remove hyphens between words unless they are part of an official name (e.g., `"state-of-the-art"` → `"state of the art"`, but `"self-driving"` stays as is if it's the official term).  
+    - Ensure consistent spacing (e.g., `"large language model"`, not `"large-language model"` or `"large language-model"`).  
+    2. Use **lowercase** for all concept names.  
+    3. Score each concept from **1.0 to 5.0** based on importance/prominence in the transcript.  
+    4. Include **a maximum of 5 concepts**.  
+    5. Skip common filler words like `"the"`, `"and"`, `"is"`, `"of"`, etc.  
+    6. Return **ONLY** a JSON array in the following exact format (**no extra text, no explanation**):  
 
-Transcript:
-{transcript}
-"""
+    [
+    {"name": "concept name", "score": 4.5},
+    {"name": "another concept", "score": 3.2}
+    ]
+
+    Transcript:
+    {transcript}
+
+    I can also extend this so that abbreviations like `"LLM"` automatically resolve to `"large language model"` before scoring. That would make results even cleaner.
+    """
         
         # Generate concepts using Gemini
         response = model.generate_content(prompt)

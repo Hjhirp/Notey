@@ -95,6 +95,9 @@ async def export_graph(
             else:
                 cc_filters = {"chunk_id": f"eq.{chunk_ids[0]}"}
                 
+            # Add user_id filter to chunk_concepts query
+            cc_filters["user_id"] = f"eq.{user_context.user_id}"
+            
             chunk_concepts = await supabase_client.select(
                 table="chunk_concepts",
                 columns="chunk_id,concept_id,score,concepts(id,name)",
@@ -253,6 +256,8 @@ async def get_graph_stats(
         
         if chunk_ids:
             cc_filter = {"chunk_id": f"in.({','.join(chunk_ids)})"} if len(chunk_ids) > 1 else {"chunk_id": f"eq.{chunk_ids[0]}"}
+            cc_filter["user_id"] = f"eq.{user_context.user_id}"
+            
             chunk_concepts = await supabase_client.select(
                 table="chunk_concepts",
                 columns="concept_id",
