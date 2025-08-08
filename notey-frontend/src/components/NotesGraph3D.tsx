@@ -6,6 +6,7 @@ interface NotesGraph3DProps {
   session?: any;
   eventId?: string;
   className?: string;
+  focusConceptName?: string;
 }
 
 interface ConceptEvent {
@@ -24,7 +25,7 @@ interface SidePanelData {
   relatedData?: any[];
 }
 
-export default function NotesGraph3D({ session, eventId, className = '' }: NotesGraph3DProps) {
+export default function NotesGraph3D({ session, eventId, className = '', focusConceptName }: NotesGraph3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
@@ -222,6 +223,27 @@ export default function NotesGraph3D({ session, eventId, className = '' }: Notes
     };
   }, [loadGraphData]);
 
+  // Focus/zoom on a concept node when focusConceptName changes
+  useEffect(() => {
+    if (!focusConceptName || !graphRef.current || !graphData.nodes.length) return;
+    // Find the concept node
+    const node = graphData.nodes.find(
+      n => n.type === 'concept' && n.label.toLowerCase() === focusConceptName.toLowerCase()
+    );
+    if (node && graphRef.current) {
+      // Find the node's position in the ForceGraph instance
+      const fgNode = graphRef.current.graphData().nodes.find((n: any) => n.id === node.id);
+      if (fgNode && typeof fgNode.x === 'number' && typeof fgNode.y === 'number' && typeof fgNode.z === 'number') {
+        graphRef.current.cameraPosition(
+          { x: fgNode.x, y: fgNode.y, z: fgNode.z + 200 },
+          { x: fgNode.x, y: fgNode.y, z: fgNode.z },
+          1000
+        );
+        graphRef.current.zoomToFit(400, 40, (n: any) => n.id === node.id);
+      }
+    }
+  }, [focusConceptName, graphData]);
+
   const closeSidePanel = () => {
     setShowSidePanel(false);
     setSidePanel(null);
@@ -278,8 +300,11 @@ export default function NotesGraph3D({ session, eventId, className = '' }: Notes
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Concept Graph</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Explore relationships between your events and concepts in an interactive 3D visualization.
+          </p>
           {stats && (
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               {stats.events} events • {stats.concepts} concepts • {stats.concept_mentions} connections
             </p>
           )}
@@ -331,15 +356,13 @@ export default function NotesGraph3D({ session, eventId, className = '' }: Notes
         )}
         
         {viewMode === 'graph' ? (
-          <>
-            <div 
-              ref={containerRef} 
-              className="w-full bg-gradient-to-br from-slate-50 to-slate-100"
-              style={{ height: 'calc(100vh - 400px)', minHeight: '500px', maxHeight: '700px' }}
-            />
-
+          <div 
+            ref={containerRef} 
+            className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-100 relative"
+            style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}
+          >
             {/* Legend */}
-            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur rounded-lg p-3 text-xs shadow-lg border border-slate-200">
+            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur rounded-lg p-3 text-xs shadow-lg border border-slate-200 z-10">
               <div className="font-semibold mb-2 text-slate-900">Legend</div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -352,7 +375,7 @@ export default function NotesGraph3D({ session, eventId, className = '' }: Notes
                 </div>
               </div>
             </div>
-          </>
+          </div>
         ) : (
           /* List View */
           <div className="flex flex-col h-full">

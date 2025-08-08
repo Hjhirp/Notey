@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "./lib/supabase";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { Analytics } from "@vercel/analytics/react";
@@ -16,12 +16,61 @@ function App() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('events');
   const [isLoading, setIsLoading] = useState(true);
+  const [chatQuery, setChatQuery] = useState('');
+  const [chatResponse, setChatResponse] = useState<any>(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [focusConcept, setFocusConcept] = useState<string | null>(null);
 
   const handleEventDeleted = (deletedEventId: string) => {
     if (selectedEventId === deletedEventId) {
       setSelectedEventId(null);
     }
   };
+
+  // Chat functionality
+  const handleChatSubmit = useCallback(async () => {
+    if (!chatQuery.trim() || chatLoading) return;
+    
+    setChatLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/ask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          query: chatQuery
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setChatResponse(data);
+      // Focus on the most relevant concept node if available
+      if (data.related_concepts && data.related_concepts.length > 0) {
+        setFocusConcept(data.related_concepts[0]);
+        setCurrentView('graph'); // Switch to graph view automatically
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setChatResponse(`Sorry, I encountered an error while processing your question: ${errorMessage}`);
+    } finally {
+      setChatLoading(false);
+    }
+  }, [chatQuery, chatLoading, session?.access_token]);
+
+  const handleChatKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleChatSubmit();
+    }
+  }, [handleChatSubmit]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -173,20 +222,112 @@ function App() {
                       </div>
                     </>
                   ) : (
-                    <div className="px-6">
+                    <div className="px-6 flex flex-col h-full">
                       <h2 className="text-lg font-semibold text-slate-900 mb-4">Concept Graph</h2>
                       <p className="text-sm text-slate-600 mb-4">
-                        Explore relationships between your events, chunks, and concepts in an interactive 3D visualization.
+                        Explore relationships between your events and concepts in an interactive 3D visualization.
                       </p>
+                      
+                      {/* Chat Interface */}
+                      <div className="mb-6">
+                        <h3 className="text-sm font-semibold text-slate-900 mb-2">Ask Questions</h3>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Ask questions like "What concepts are related to machine learning?" or "Show me events about product development"
+                        </p>
+                        
+                        {/* Chat Input */}
+                        <div className="relative mb-3">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            value={chatQuery}
+                            onChange={(e) => setChatQuery(e.target.value)}
+                            onKeyPress={handleChatKeyPress}
+                            placeholder="Ask about your concepts..."
+                            disabled={chatLoading}
+                            className="block w-full pl-9 pr-10 py-2 text-sm border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-500 focus:outline-none focus:placeholder-slate-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                          />
+                          <button 
+                            onClick={handleChatSubmit}
+                            disabled={chatLoading || !chatQuery.trim()}
+                            className="absolute inset-y-0 right-0 pr-2 flex items-center disabled:opacity-50"
+                          >
+                            {chatLoading ? (
+                              <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                            ) : (
+                              <svg className="h-4 w-4 text-blue-600 hover:text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Chat Response */}
+                        {chatResponse && (
+                          <div className="bg-white border border-blue-200 rounded-xl p-5 mb-4 shadow-md animate-fade-in">
+                            <div className="flex items-start gap-3 mb-2">
+                              <div className="flex-shrink-0 bg-blue-100 rounded-full p-2">
+                                <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-base text-blue-900 font-medium whitespace-pre-wrap mb-2">{chatResponse.answer || chatResponse}</div>
+                                {/* Show sources and related concepts if available */}
+                                {Array.isArray(chatResponse.sources) && chatResponse.sources.length > 0 && (
+                                  <div className="mt-3">
+                                    <div className="font-semibold text-xs text-slate-500 mb-1">Sources:</div>
+                                    <ul className="list-disc list-inside text-xs text-slate-700 space-y-1">
+                                      {chatResponse.sources.map((src: any, i: number) => (
+                                        <li key={i}>
+                                          <span className="font-medium text-blue-700">{src.event_title}</span>
+                                          {src.event_date && (
+                                            <span className="ml-2 text-slate-400">({src.event_date})</span>
+                                          )}
+                                          {src.concept_score && (
+                                            <span className="ml-2 text-xs text-orange-600">Score: {src.concept_score.toFixed(2)}</span>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {Array.isArray(chatResponse.related_concepts) && chatResponse.related_concepts.length > 0 && (
+                                  <div className="mt-3">
+                                    <div className="font-semibold text-xs text-slate-500 mb-1">Related Concepts:</div>
+                                    <div className="flex flex-wrap gap-2">
+                                      {chatResponse.related_concepts.map((concept: string, i: number) => (
+                                        <span key={i} className="inline-block bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-semibold">
+                                          {concept}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => setChatResponse(null)}
+                                className="flex-shrink-0 text-blue-400 hover:text-blue-600 mt-1"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Legend */}
                       <div className="bg-slate-50 rounded-lg p-3">
                         <div className="text-xs text-slate-500 space-y-1">
                           <div className="flex items-center">
                             <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                             <span>Events</span>
-                          </div>
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                            <span>Audio Chunks</span>
                           </div>
                           <div className="flex items-center">
                             <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
@@ -253,6 +394,7 @@ function App() {
                           session={session} 
                           eventId={selectedEventId || undefined}
                           className=""
+                          focusConceptName={focusConcept || undefined}
                         />
                       </div>
                     ) : selectedEventId ? (
