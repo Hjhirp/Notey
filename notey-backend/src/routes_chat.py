@@ -475,3 +475,105 @@ async def search_concepts(
             status_code=500,
             detail=f"Failed to search concepts: {str(e)}"
         )
+
+@router.get("/concept/{concept_name}/report-data")
+async def get_concept_report_data(
+    concept_name: str,
+    user_context = Depends(verify_supabase_token)
+) -> Dict[str, Any]:
+    """
+    Get comprehensive data for generating a PDF report about a specific concept.
+    Includes events, transcripts, summaries, and photos.
+    """
+    try:
+        logger.info(f"Generating report data for concept: {concept_name}")
+        
+        # 1. Get basic concept data using existing endpoint
+        concept_data = await get_notes_by_concept(concept_name, user_context)
+        
+        if not concept_data["events"]:
+            return {
+                "concept": concept_name,
+                "summary": f"No events found related to the concept '{concept_name}'.",
+                "events": []
+            }
+        
+        # 2. Get photos for each event
+        event_ids = [event["id"] for event in concept_data["events"]]
+        photos_by_event = {}
+        
+        if event_ids:
+            event_filter = {"event_id": f"in.({','.join(event_ids)})"}
+            all_photos = await supabase_client.select(
+                table="event_photos",
+                columns="id,event_id,photo_url,offset_seconds,created_at",
+                filters=event_filter,
+                order="offset_seconds.asc",
+                user_token=user_context.token
+            )
+            
+            # Group photos by event
+            for photo in all_photos:
+                event_id = photo["event_id"]
+                if event_id not in photos_by_event:
+                    photos_by_event[event_id] = []
+                photos_by_event[event_id].append(photo)
+        
+        # 3. Build comprehensive report events
+        report_events = []
+        all_transcripts = []
+        
+        for event in concept_data["events"]:
+            event_id = event["id"]
+            
+            # Get all transcripts for this event from the concept notes
+            event_notes = [note for note in concept_data["notes"] if note["event_id"] == event_id]
+            event_transcripts = [note["transcript"] for note in event_notes if note.get("transcript")]
+            combined_transcript = " ".join(event_transcripts).strip()
+            
+            # Collect for overall summary
+            if combined_transcript:
+                all_transcripts.append(combined_transcript)
+            
+            report_event = {
+                "id": event_id,
+                "title": event["title"],
+                "started_at": event["started_at"],
+                "transcript": combined_transcript or "No transcript available for this event.",
+                "photos": photos_by_event.get(event_id, [])
+            }
+            
+            report_events.append(report_event)
+        
+        # 4. Generate overall summary using AI
+        overall_summary = f"This report covers {len(report_events)} event(s) related to the concept '{concept_name}'."
+        
+        if all_transcripts:
+            try:
+                # Use Gemini to generate a comprehensive summary
+                summary_prompt = f"""
+Based on the following transcripts from multiple voice recordings, provide a comprehensive 2-3 paragraph summary of the concept "{concept_name}":
+
+Transcripts:
+{' '.join(all_transcripts[:5000])}  # Limit to avoid token limits
+
+Please provide a concise but informative summary that captures the key points, themes, and insights related to "{concept_name}" across all these recordings.
+"""
+                response = model.generate_content(summary_prompt)
+                overall_summary = response.text.strip()
+            except Exception as e:
+                logger.warning(f"Failed to generate AI summary: {e}")
+                # Fallback to basic summary
+        
+        return {
+            "concept": concept_name,
+            "summary": overall_summary,
+            "events": report_events
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating report data for concept '{concept_name}': {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate report data: {str(e)}"
+        )

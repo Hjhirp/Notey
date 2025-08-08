@@ -246,6 +246,87 @@ async def transcribe_summary_endpoint(payload: AudioURL):
         detail="Unexpected error in retry logic"
     )
 
+@router.get("/events/{event_id}/timeline")
+async def get_event_timeline(event_id: str, user_context = Depends(verify_supabase_token)):
+    """
+    Get timeline data for an event including audio, photos, and transcript
+    """
+    try:
+        # Get event details
+        event_details = await database.get_event_details(event_id)
+        if not event_details:
+            raise HTTPException(
+                status_code=404,
+                detail="Event not found"
+            )
+        
+        # Get audio chunks
+        audio_chunks = await database.get_audio_chunks(event_id)
+        
+        # Prepare audio data
+        audio_data = None
+        transcript_segments = []
+        
+        if audio_chunks and len(audio_chunks) > 0:
+            # Use the first audio chunk (assuming single audio per event)
+            primary_chunk = audio_chunks[0]
+            
+            # Calculate total duration (from all chunks or stored length)
+            total_duration = max(
+                [chunk.get('start_time', 0) + chunk.get('length', 0) for chunk in audio_chunks],
+                default=primary_chunk.get('length', 0)
+            )
+            
+            audio_data = {
+                "url": primary_chunk.get('audio_url'),
+                "duration": total_duration
+            }
+            
+            # Create transcript segments (simplified - treat full transcript as one segment)
+            for chunk in audio_chunks:
+                if chunk.get('transcript'):
+                    transcript_segments.append({
+                        "start": chunk.get('start_time', 0),
+                        "end": chunk.get('start_time', 0) + chunk.get('length', 0),
+                        "text": chunk.get('transcript', '')
+                    })
+        
+        # Get photos
+        photos_data = []
+        if 'photos' in event_details and event_details['photos']:
+            for photo in event_details['photos']:
+                photos_data.append({
+                    "id": photo.get('id', ''),
+                    "offset": photo.get('offset_seconds', 0),
+                    "url": photo.get('photo_url', ''),
+                    "caption": photo.get('caption', '')
+                })
+        
+        # Sort photos by offset
+        photos_data.sort(key=lambda p: p['offset'])
+        
+        timeline_response = {
+            "event": {
+                "id": event_details.get('id', event_id),
+                "title": event_details.get('title', 'Untitled Event'),
+                "started_at": event_details.get('started_at', '')
+            },
+            "audio": audio_data,
+            "photos": photos_data,
+            "transcript": transcript_segments
+        }
+        
+        return timeline_response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get timeline data: {str(e)}"
+        )
+
+
 @router.delete("/events/{event_id}")
 async def delete_event(event_id: str, user_context = Depends(verify_supabase_token)):
     """Delete an event and all associated data"""

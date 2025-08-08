@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import PhotoTimelinePlayer from "./PhotoTimelinePlayer";
+import TimelinePlayer from "./TimelinePlayer";
+import DownloadMenu from "./DownloadMenu";
 import config from "../config";
 
 const BACKEND_URL = config.BACKEND_URL;
@@ -22,6 +23,29 @@ interface Photo {
   created_at?: string;
 }
 
+interface TimelineData {
+  event: {
+    id: string;
+    title: string;
+    started_at: string;
+  };
+  audio: {
+    url: string;
+    duration: number;
+  } | null;
+  photos: {
+    id: string;
+    offset: number;
+    url: string;
+    caption?: string;
+  }[];
+  transcript: {
+    start: number;
+    end: number;
+    text: string;
+  }[];
+}
+
 interface EventData {
   audio_url?: string;
   photos?: Photo[];
@@ -37,12 +61,32 @@ export default function Replay({
   onEventDeleted?: (id: string) => void;
 }) {
   const [eventData, setEventData] = useState<EventData | null>(null);
+  const [timelineData, setTimelineData] = useState<TimelineData | null>(null);
   const [audioChunks, setAudioChunks] = useState<AudioChunk[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [selectedGalleryPhoto, setSelectedGalleryPhoto] = useState<Photo | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Keyboard navigation for gallery modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedGalleryPhoto) {
+        if (e.key === 'Escape') {
+          setSelectedGalleryPhoto(null);
+        }
+        // Prevent other keyboard shortcuts when gallery modal is open
+        e.stopPropagation();
+      }
+    };
+    
+    if (selectedGalleryPhoto) {
+      document.addEventListener('keydown', handleKeyDown, true);
+      return () => document.removeEventListener('keydown', handleKeyDown, true);
+    }
+  }, [selectedGalleryPhoto]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -51,20 +95,29 @@ export default function Replay({
       try {
         setLoading(true);
 
-        // Fetch basic event data (for photos, etc.)
+        // Try to fetch timeline data first (new endpoint)
+        try {
+          const timelineRes = await fetch(`${BACKEND_URL}/events/${eventId}/timeline`);
+          if (timelineRes.ok) {
+            const timelineJson = await timelineRes.json();
+            setTimelineData(timelineJson);
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn('Timeline endpoint not available, falling back to legacy endpoints');
+        }
+
+        // Fallback to legacy endpoints
         const eventRes = await fetch(`${BACKEND_URL}/events/${eventId}`);
         const eventJson = await eventRes.json();
         setEventData(eventJson);
 
-        // Fetch audio chunks data (for transcript and summary)
         const chunksUrl = `${BACKEND_URL}/audio-chunks?event_id=${eventId}`;
-        
         const chunksRes = await fetch(chunksUrl);
-        
         const chunksJson = await chunksRes.json();
         
         setAudioChunks(Array.isArray(chunksJson) ? chunksJson : []);
-        
         
       } catch (err) {
         console.error("Failed to load replay");
@@ -180,33 +233,83 @@ export default function Replay({
       </div>
 
       <div className="card-content space-y-6 sm:space-y-8">
-        {/* Audio Player Section */}
-        {(audioChunks[0]?.audio_url || eventData?.audio_url) && (
-          <div className="bg-notey-cream/50 rounded-lg p-4 sm:p-5 border border-notey-orange/20">
-            <h3 className="text-base sm:text-lg font-semibold text-notey-brown mb-4 flex items-center">
-              <span className="w-3 h-3 bg-notey-orange rounded-full mr-3"></span>
-              Audio Player
-            </h3>
-            <audio 
-              ref={audioRef}
-              controls 
-              src={audioChunks[0]?.audio_url || eventData?.audio_url} 
-              className="w-full h-12 sm:h-14 rounded-lg"
-              style={{
-                accentColor: '#F28C38'
-              }}
+        {/* Timeline Player - use timeline data if available, otherwise create from legacy data */}
+        {(timelineData?.audio || (audioChunks[0]?.audio_url || eventData?.audio_url)) && eventData?.photos?.length ? (
+          <div className="space-y-4">
+            <TimelinePlayer
+              audioUrl={timelineData?.audio?.url || audioChunks[0]?.audio_url || eventData?.audio_url || ''}
+              duration={timelineData?.audio?.duration || 0}
+              photos={timelineData?.photos?.map(p => ({
+                id: p.id,
+                offset: p.offset,
+                url: p.url,
+                caption: p.caption
+              })) || eventData?.photos?.map(p => ({
+                id: p.id || `photo-${p.offset_seconds}`,
+                offset: p.offset_seconds,
+                url: p.photo_url,
+                caption: undefined
+              })) || []}
+              transcript={timelineData?.transcript || []}
+              className="mb-6"
             />
+            
+            {/* Download Menu */}
+            <div className="flex justify-end">
+              <DownloadMenu
+                eventId={eventId}
+                audioUrl={timelineData?.audio?.url || audioChunks[0]?.audio_url || eventData?.audio_url || ''}
+                photos={timelineData?.photos?.map(p => ({
+                  id: p.id,
+                  url: p.url,
+                  filename: `photo-${p.offset.toFixed(1)}s.jpg`
+                })) || eventData?.photos?.map(p => ({
+                  id: p.id || `photo-${p.offset_seconds}`,
+                  url: p.photo_url,
+                  filename: `photo-${p.offset_seconds.toFixed(1)}s.jpg`
+                })) || []}
+                eventTitle={timelineData?.event?.title || `Event ${eventId.split('-')[0]}`}
+              />
+            </div>
           </div>
-        )}
+        ) : (
+          /* Fallback to Legacy Components */
+          <>
+            {/* Audio Player Section */}
+            {(audioChunks[0]?.audio_url || eventData?.audio_url) && (
+              <div className="bg-notey-cream/50 rounded-lg p-4 sm:p-5 border border-notey-orange/20">
+                <h3 className="text-base sm:text-lg font-semibold text-notey-brown mb-4 flex items-center">
+                  <span className="w-3 h-3 bg-notey-orange rounded-full mr-3"></span>
+                  Audio Player
+                </h3>
+                <audio 
+                  ref={audioRef}
+                  controls 
+                  src={audioChunks[0]?.audio_url || eventData?.audio_url} 
+                  className="w-full h-12 sm:h-14 rounded-lg"
+                  style={{
+                    accentColor: '#F28C38'
+                  }}
+                />
+              </div>
+            )}
 
-        {/* Timeline-Synchronized Photos */}
-        {eventData?.photos && eventData.photos.length > 0 && (
-          <PhotoTimelinePlayer
-            photos={eventData.photos}
-            audioRef={audioRef}
-            isPlaying={isAudioPlaying}
-            className="mb-6 sm:mb-8"
-          />
+            {/* Legacy Download Menu for Fallback */}
+            {(audioChunks[0]?.audio_url || eventData?.audio_url || (eventData?.photos && eventData.photos.length > 0)) && (
+              <div className="flex justify-end">
+                <DownloadMenu
+                  eventId={eventId}
+                  audioUrl={audioChunks[0]?.audio_url || eventData?.audio_url || ''}
+                  photos={eventData?.photos?.map((p, i) => ({
+                    id: p.id || `photo-${i}`,
+                    url: p.photo_url,
+                    filename: `photo-${p.offset_seconds.toFixed(1)}s.jpg`
+                  })) || []}
+                  eventTitle={`Event ${eventId.split('-')[0]}`}
+                />
+              </div>
+            )}
+          </>
         )}
 
 
@@ -256,7 +359,8 @@ export default function Replay({
               {eventData.photos.map((photo: Photo, idx: number) => (
                 <div 
                   key={idx} 
-                  className="bg-notey-cream/50 rounded-lg overflow-hidden border border-notey-orange/20 hover:border-notey-orange/40 transition-all duration-200 group hover:shadow-md"
+                  className="bg-notey-cream/50 rounded-lg overflow-hidden border border-notey-orange/20 hover:border-notey-orange/40 transition-all duration-200 group hover:shadow-md cursor-pointer"
+                  onClick={() => setSelectedGalleryPhoto(photo)}
                 >
                   <div className="aspect-square overflow-hidden">
                     <img 
@@ -318,6 +422,81 @@ export default function Replay({
                     'Delete Event'
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gallery Photo Modal */}
+      {selectedGalleryPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 animate-fade-in"
+          onClick={() => setSelectedGalleryPhoto(null)}
+        >
+          <div
+            className="relative max-w-6xl max-h-full w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
+              {/* Photo */}
+              <div className="relative bg-black">
+                <img
+                  src={selectedGalleryPhoto.photo_url}
+                  alt={`Event photo taken at ${selectedGalleryPhoto.offset_seconds}s`}
+                  className="w-full h-auto max-h-[85vh] object-contain mx-auto block"
+                  style={{ minHeight: '300px' }}
+                />
+                
+                {/* Close button overlay */}
+                <button
+                  onClick={() => setSelectedGalleryPhoto(null)}
+                  className="absolute top-4 right-4 w-10 h-10 bg-black/70 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors flex items-center justify-center z-10"
+                  aria-label="Close photo"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Photo Info */}
+              <div className="p-6 bg-gradient-to-r from-notey-orange to-notey-orange/80">
+                <div className="flex items-center justify-between text-white">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-semibold">
+                      📸 Photo from Event
+                    </h3>
+                    <p className="text-white/90 text-sm sm:text-base mt-1">
+                      Captured at {selectedGalleryPhoto.offset_seconds?.toFixed(1) || "unknown"} seconds
+                    </p>
+                    {selectedGalleryPhoto.created_at && (
+                      <p className="text-white/80 text-xs mt-2">
+                        {new Date(selectedGalleryPhoto.created_at).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Download button */}
+                  <button
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = selectedGalleryPhoto.photo_url;
+                      link.download = `photo-${selectedGalleryPhoto.offset_seconds?.toFixed(1) || 'unknown'}s.jpg`;
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="bg-white/20 backdrop-blur-sm text-white p-3 rounded-lg hover:bg-white/30 transition-colors flex items-center space-x-2"
+                    title="Download photo"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-sm font-medium">Download</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
