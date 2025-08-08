@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 import os
 from src.routes import router
+from src.routes_concepts import router as concepts_router
+from src.routes_graph import router as graph_router
 
 # Load environment variables
 load_dotenv()
@@ -47,3 +49,5 @@ async def health():
 
 # Include all routes
 app.include_router(router)
+app.include_router(concepts_router)
+app.include_router(graph_router)

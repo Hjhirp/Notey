@@ -7,10 +7,14 @@ import Recorder from "./components/Recorder";
 import Events from "./components/Events";
 import Replay from "./components/Replay";
 import Navbar from "./components/Navbar";
+import NotesGraph3D from "./components/NotesGraph3D";
+
+type ViewType = 'events' | 'graph';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<ViewType>('events');
   const [isLoading, setIsLoading] = useState(true);
 
   const handleEventDeleted = (deletedEventId: string) => {
@@ -125,18 +129,73 @@ function App() {
             <div className="hidden lg:flex lg:w-80 lg:flex-col lg:fixed lg:inset-y-0 lg:pt-16">
               <div className="flex-1 flex flex-col min-h-0 bg-white border-r border-slate-200">
                 <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-                  <div className="px-6">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
-                    <Recorder session={session} />
+                  {/* Navigation Tabs */}
+                  <div className="px-6 mb-6">
+                    <div className="flex space-x-1 bg-slate-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setCurrentView('events')}
+                        className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentView === 'events'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="mr-2">🎧</span>
+                        Events
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('graph')}
+                        className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentView === 'graph'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="mr-2">🕸️</span>
+                        Graph
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-8 px-6">
-                    <Events 
-                      session={session} 
-                      onSelectEvent={setSelectedEventId}
-                      selectedEventId={selectedEventId}
-                      onEventDeleted={handleEventDeleted}
-                    />
-                  </div>
+
+                  {currentView === 'events' ? (
+                    <>
+                      <div className="px-6">
+                        <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
+                        <Recorder session={session} />
+                      </div>
+                      <div className="mt-8 px-6">
+                        <Events 
+                          session={session} 
+                          onSelectEvent={setSelectedEventId}
+                          selectedEventId={selectedEventId}
+                          onEventDeleted={handleEventDeleted}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="px-6">
+                      <h2 className="text-lg font-semibold text-slate-900 mb-4">Concept Graph</h2>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Explore relationships between your events, chunks, and concepts in an interactive 3D visualization.
+                      </p>
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <div className="text-xs text-slate-500 space-y-1">
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                            <span>Events</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span>Audio Chunks</span>
+                          </div>
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                            <span>Concepts</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -145,21 +204,59 @@ function App() {
             <div className="lg:pl-80 flex flex-col flex-1">
               <main className="flex-1 pt-16">
                 <div className="py-8 px-6">
-                  {/* Mobile Layout */}
-                  <div className="lg:hidden space-y-6 mb-8">
-                    <Recorder session={session} />
-                    <Events 
-                      session={session} 
-                      onSelectEvent={setSelectedEventId}
-                      selectedEventId={selectedEventId}
-                      onEventDeleted={handleEventDeleted}
-                    />
+                  {/* Mobile Layout - Show navigation tabs */}
+                  <div className="lg:hidden mb-6">
+                    <div className="flex space-x-1 bg-slate-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setCurrentView('events')}
+                        className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentView === 'events'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="mr-2">🎧</span>
+                        Events
+                      </button>
+                      <button
+                        onClick={() => setCurrentView('graph')}
+                        className={`flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentView === 'graph'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="mr-2">🕸️</span>
+                        Graph
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Mobile Events Layout */}
+                  {currentView === 'events' && (
+                    <div className="lg:hidden space-y-6 mb-8">
+                      <Recorder session={session} />
+                      <Events 
+                        session={session} 
+                        onSelectEvent={setSelectedEventId}
+                        selectedEventId={selectedEventId}
+                        onEventDeleted={handleEventDeleted}
+                      />
+                    </div>
+                  )}
+
                   {/* Content Area */}
-                  <div className="max-w-4xl mx-auto">
-                    {selectedEventId ? (
+                  <div className="max-w-6xl mx-auto">
+                    {currentView === 'graph' ? (
                       <div className="animate-fade-in">
+                        <NotesGraph3D 
+                          session={session} 
+                          eventId={selectedEventId || undefined}
+                          className=""
+                        />
+                      </div>
+                    ) : selectedEventId ? (
+                      <div className="animate-fade-in max-w-4xl mx-auto">
                         <Replay eventId={selectedEventId} session={session} onEventDeleted={handleEventDeleted} />
                       </div>
                     ) : (

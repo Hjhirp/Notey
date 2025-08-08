@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concept Generation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .concept-item {
+            display: inline-block;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 5px 10px;
+            margin: 3px;
+            border-radius: 15px;
+            font-size: 14px;
+        }
+        .concept-score {
+            background: #17a2b8;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Concept Generation Testing Tool</h1>
+        <p>Test the concept extraction and graph generation functionality with sample data.</p>
+        
+        <div class="test-section info">
+            <h3>Configuration</h3>
+            <label>Backend URL: </label>
+            <input type="text" id="backendUrl" value="http://localhost:8000" style="width: 300px;">
+            <br><br>
+            <label>User Token: </label>
+            <input type="text" id="userToken" placeholder="Paste your session token here" style="width: 400px;">
+            <br><small>You can get this from your browser's developer tools when logged into Notey</small>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 1: Test Sample Concept Extraction</h3>
+            <p>Extract concepts from sample transcript and summary using the Gemini integration format:</p>
+            <div id="sampleData">
+                <strong>Sample Transcript:</strong>
+                <div class="output">We discussed implementing machine learning models for customer segmentation. The team agreed on using natural language processing for sentiment analysis of customer feedback. We need to consider data privacy and GDPR compliance when implementing these AI solutions.</div>
+                
+                <strong>Sample Summary:</strong>
+                <div class="output">Meeting about AI implementation strategy focusing on ML models, NLP for sentiment analysis, and data privacy concerns.</div>
+            </div>
+            
+            <button onclick="testConceptExtraction()">Extract Concepts from Sample</button>
+            <div id="extractionOutput" class="output" style="display: none;"></div>
+            <div id="extractedConcepts" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 2: Test Concept Upsert API</h3>
+            <p>Test posting extracted concepts to the backend API:</p>
+            <label>Chunk ID: </label>
+            <input type="text" id="chunkId" placeholder="Enter a valid chunk UUID" style="width: 300px;">
+            <br><br>
+            <button onclick="testConceptUpsert()">Test Concept Upsert</button>
+            <div id="upsertOutput" class="output" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 3: Test Graph Export</h3>
+            <p>Test the graph export functionality to see events and concepts:</p>
+            <button onclick="testGraphExport()">Export Graph Data</button>
+            <div id="graphOutput" class="output" style="display: none;"></div>
+            <div id="graphSummary"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Step 4: Test Graph Stats</h3>
+            <p>Get statistics about the concept graph:</p>
+            <button onclick="testGraphStats()">Get Graph Stats</button>
+            <div id="statsOutput" class="output" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Gemini Prompt for Reference</h3>
+            <p>Use this prompt format when calling Gemini for concept extraction:</p>
+            <div class="output">Extract high-signal concepts from transcript and summary
+You are an information extraction assistant. Read the inputs and output JSON for concept mentions.
+
+Constraints:
+- Up to 20 items
+- Prefer canonical multi-word terms over uninformative single words  
+- Include people and orgs if substantively discussed
+- name must be lowercase, trimmed, ascii quotes removed
+- score in [0.5, 5.0] measures relevance and specificity
+- from_sec and to_sec are optional numbers if time span is clear; otherwise null
+- No extra keys. No commentary.
+
+Return only:
+{
+  "mentions": [
+    { "name": "voice biometrics", "score": 4.5, "from_sec": null, "to_sec": null }
+  ]
+}
+
+Inputs:
+chunk_id: {chunk_id}
+summary: {summary}  
+transcript: {transcript}</div>
+        </div>
+    </div>
+
+    <script>
+        // Sample concepts that should be extracted
+        const sampleConcepts = [
+            { "name": "machine learning", "score": 4.5, "from_sec": null, "to_sec": null },
+            { "name": "customer segmentation", "score": 4.0, "from_sec": null, "to_sec": null },
+            { "name": "natural language processing", "score": 4.2, "from_sec": null, "to_sec": null },
+            { "name": "sentiment analysis", "score": 3.8, "from_sec": null, "to_sec": null },
+            { "name": "data privacy", "score": 3.5, "from_sec": null, "to_sec": null },
+            { "name": "gdpr compliance", "score": 3.7, "from_sec": null, "to_sec": null },
+            { "name": "ai solutions", "score": 3.2, "from_sec": null, "to_sec": null }
+        ];
+
+        function getHeaders() {
+            const token = document.getElementById('userToken').value;
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            return headers;
+        }
+
+        function getBackendUrl() {
+            return document.getElementById('backendUrl').value || 'http://localhost:8000';
+        }
+
+        function showOutput(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = typeof content === 'object' ? JSON.stringify(content, null, 2) : content;
+            element.parentElement.className = element.parentElement.className.replace(/\s?(success|error|info)/, '');
+            element.parentElement.className += isError ? ' error' : ' success';
+        }
+
+        function testConceptExtraction() {
+            console.log('Testing concept extraction...');
+            
+            // Simulate concept extraction result
+            const extractionResult = {
+                "mentions": sampleConcepts
+            };
+
+            showOutput('extractionOutput', extractionResult);
+            
+            // Display concepts visually
+            const conceptsDiv = document.getElementById('extractedConcepts');
+            conceptsDiv.innerHTML = '<strong>Extracted Concepts:</strong><br>';
+            
+            sampleConcepts.forEach(concept => {
+                const div = document.createElement('div');
+                div.className = 'concept-item';
+                div.innerHTML = `${concept.name} <span class="concept-score">${concept.score}</span>`;
+                conceptsDiv.appendChild(div);
+            });
+        }
+
+        async function testConceptUpsert() {
+            const chunkId = document.getElementById('chunkId').value;
+            if (!chunkId) {
+                alert('Please enter a chunk ID');
+                return;
+            }
+
+            const payload = {
+                chunk_id: chunkId,
+                mentions: sampleConcepts
+            };
+
+            try {
+                const response = await fetch(`${getBackendUrl()}/concepts/upsert`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showOutput('upsertOutput', `✅ Success!\n${JSON.stringify(result, null, 2)}`);
+                } else {
+                    showOutput('upsertOutput', `❌ Error!\n${JSON.stringify(result, null, 2)}`, true);
+                }
+            } catch (error) {
+                showOutput('upsertOutput', `❌ Network Error: ${error.message}`, true);
+            }
+        }
+
+        async function testGraphExport() {
+            try {
+                const response = await fetch(`${getBackendUrl()}/graph/export`, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showOutput('graphOutput', result);
+                    
+                    // Show graph summary
+                    const summaryDiv = document.getElementById('graphSummary');
+                    const nodes = result.nodes || [];
+                    const links = result.links || [];
+                    
+                    const nodeTypes = {};
+                    nodes.forEach(node => {
+                        nodeTypes[node.type] = (nodeTypes[node.type] || 0) + 1;
+                    });
+                    
+                    const linkTypes = {};
+                    links.forEach(link => {
+                        linkTypes[link.type] = (linkTypes[link.type] || 0) + 1;
+                    });
+                    
+                    summaryDiv.innerHTML = `
+                        <strong>Graph Summary:</strong><br>
+                        📊 Total Nodes: ${nodes.length}<br>
+                        🔗 Total Links: ${links.length}<br><br>
+                        <strong>Node Types:</strong><br>
+                        ${Object.entries(nodeTypes).map(([type, count]) => `• ${type}: ${count}`).join('<br>')}<br><br>
+                        <strong>Link Types:</strong><br>
+                        ${Object.entries(linkTypes).map(([type, count]) => `• ${type}: ${count}`).join('<br>')}
+                    `;
+                } else {
+                    showOutput('graphOutput', `❌ Error!\n${JSON.stringify(result, null, 2)}`, true);
+                }
+            } catch (error) {
+                showOutput('graphOutput', `❌ Network Error: ${error.message}`, true);
+            }
+        }
+
+        async function testGraphStats() {
+            try {
+                const response = await fetch(`${getBackendUrl()}/graph/stats`, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showOutput('statsOutput', result);
+                } else {
+                    showOutput('statsOutput', `❌ Error!\n${JSON.stringify(result, null, 2)}`, true);
+                }
+            } catch (error) {
+                showOutput('statsOutput', `❌ Network Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

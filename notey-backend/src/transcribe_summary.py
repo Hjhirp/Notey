@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from .summarizer import summarize_transcript
+from .concept_extractor import extract_concepts_from_transcript
 
 # Load environment variables
 load_dotenv()
@@ -59,8 +60,15 @@ async def transcribe_and_summarize(audio_url: str) -> TranscribeSummaryResponse:
                 detail="Summarization failed: Empty summary generated"
             )
 
-        # Step 3: Persist transcript and summary to database
-        await update_audio_chunk_with_results(audio_url, transcript, summary)
+        # Step 3: Extract concepts from transcript
+        concepts = await extract_concepts_from_transcript(transcript)
+        
+        # Step 4: Persist transcript and summary to database
+        chunk_id = await update_audio_chunk_with_results(audio_url, transcript, summary)
+        
+        # Step 5: If we got a chunk_id and concepts, upsert them automatically
+        if chunk_id and concepts:
+            await upsert_concepts_for_chunk(chunk_id, concepts)
 
         return TranscribeSummaryResponse(
             transcript=transcript,
@@ -82,7 +90,7 @@ async def transcribe_and_summarize(audio_url: str) -> TranscribeSummaryResponse:
         )
 
 
-async def update_audio_chunk_with_results(audio_url: str, transcript: str, summary: str):
+async def update_audio_chunk_with_results(audio_url: str, transcript: str, summary: str) -> str:
     """
     Update the audio_chunks record with transcript and summary
     
@@ -90,9 +98,30 @@ async def update_audio_chunk_with_results(audio_url: str, transcript: str, summa
         audio_url: The audio URL to match against
         transcript: The transcribed text
         summary: The generated summary
+        
+    Returns:
+        chunk_id: The UUID of the updated chunk, or None if update failed
     """
     try:
         async with httpx.AsyncClient() as client:
+            # First get the chunk_id for this audio_url
+            get_res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/audio_chunks?audio_url=eq.{audio_url}&select=id",
+                headers={
+                    "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json"
+                }
+            )
+            get_res.raise_for_status()
+            
+            chunks = get_res.json()
+            if not chunks:
+                return None
+                
+            chunk_id = chunks[0]["id"]
+            
+            # Update with transcript and summary
             res = await client.patch(
                 f"{SUPABASE_URL}/rest/v1/audio_chunks?audio_url=eq.{audio_url}",
                 headers={
@@ -108,11 +137,13 @@ async def update_audio_chunk_with_results(audio_url: str, transcript: str, summa
             )
             res.raise_for_status()
             
+            return chunk_id
+            
     except Exception as e:
         # Failed to update database
         # Log the error but don't fail the entire operation
         # The transcript and summary are still returned to the user
-        pass
+        return None
 
 
 async def transcribe_audio_only(audio_url: str) -> str:
@@ -153,3 +184,81 @@ async def transcribe_audio_only(audio_url: str) -> str:
             status_code=500,
             detail=f"Transcription failed: {str(e)}"
         )
+
+
+async def upsert_concepts_for_chunk(chunk_id: str, concepts: list):
+    """
+    Automatically upsert concepts for a chunk using direct database operations.
+    This bypasses the API endpoint and uses service role permissions.
+    
+    Args:
+        chunk_id: UUID of the audio chunk
+        concepts: List of concept dictionaries from concept extraction
+    """
+    try:
+        if not concepts:
+            return
+            
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            for concept in concepts:
+                # 1. Upsert the concept (create if doesn't exist)
+                concept_data = {"name": concept["name"]}
+                
+                try:
+                    # Try to insert the concept
+                    response = await client.post(
+                        f"{SUPABASE_URL}/rest/v1/concepts",
+                        headers={**headers, "Prefer": "return=representation"},
+                        json=concept_data
+                    )
+                    
+                    if response.status_code == 201:
+                        concept_result = response.json()
+                        concept_id = concept_result[0]["id"]
+                    else:
+                        # Concept already exists, get its ID
+                        response = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/concepts?name=eq.{concept['name']}&select=id",
+                            headers=headers
+                        )
+                        
+                        if response.status_code == 200:
+                            existing_concepts = response.json()
+                            if existing_concepts:
+                                concept_id = existing_concepts[0]["id"]
+                            else:
+                                continue  # Skip this concept
+                        else:
+                            continue  # Skip this concept
+                
+                except Exception:
+                    continue  # Skip this concept on error
+                
+                # 2. Upsert chunk_concept relationship
+                chunk_concept_data = {
+                    "chunk_id": chunk_id,
+                    "concept_id": concept_id,
+                    "score": concept["score"],
+                    "from_sec": concept.get("from_sec"),
+                    "to_sec": concept.get("to_sec")
+                }
+                
+                try:
+                    await client.post(
+                        f"{SUPABASE_URL}/rest/v1/chunk_concepts",
+                        headers={**headers, "Prefer": "return=representation,resolution=merge-duplicates"},
+                        json=chunk_concept_data
+                    )
+                except Exception:
+                    continue  # Skip this relationship on error
+                    
+    except Exception as e:
+        # Don't fail the entire pipeline if concept upsert fails
+        # Just log and continue
+        pass

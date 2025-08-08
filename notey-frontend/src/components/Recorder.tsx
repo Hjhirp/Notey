@@ -19,6 +19,17 @@ export default function Recorder({ session }: { session: Session | null }) {
   const startRecording = async () => {
     try {
       setFeedback(null);
+      
+      // Validate title is required
+      const title = eventName.trim();
+      if (!title) {
+        setFeedback({ 
+          type: 'error', 
+          message: 'Event title is required before recording' 
+        });
+        return;
+      }
+      
       setIsProcessing(true);
       
       const token = session?.access_token;
@@ -29,7 +40,7 @@ export default function Recorder({ session }: { session: Session | null }) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          title: eventName.trim() || "Untitled Event"
+          title: eventName.trim()
         })
       });
 
@@ -168,7 +179,7 @@ export default function Recorder({ session }: { session: Session | null }) {
           <div className="space-y-3">
             <div>
               <label htmlFor="eventName" className="block text-sm font-medium text-slate-700 mb-2">
-                Event Name
+                Event Title <span className="text-red-500">*</span>
               </label>
               <input
                 id="eventName"
@@ -178,14 +189,15 @@ export default function Recorder({ session }: { session: Session | null }) {
                 placeholder="Quick meeting notes..."
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-notey-orange focus:border-transparent transition-all duration-200"
                 maxLength={100}
+                required
               />
-              <div className="mt-1 text-xs text-slate-500">
+              <div className="mt-1 text-xs text-slate-500 text-right">
                 {eventName.length}/100 characters
               </div>
             </div>
             <button 
               onClick={startRecording}
-              disabled={isProcessing}
+              disabled={isProcessing || !eventName.trim()}
               className="w-full px-4 py-3 bg-notey-orange text-white font-semibold rounded-lg hover:bg-notey-orange/90 focus:outline-none focus:ring-2 focus:ring-notey-orange focus:ring-offset-2 transition-all duration-200 text-sm min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               {isProcessing ? (
