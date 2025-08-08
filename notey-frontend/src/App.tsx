@@ -275,18 +275,18 @@ function App() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                               </div>
-                              <div className="flex-1">
-                                <div className="text-base text-blue-900 font-medium whitespace-pre-wrap mb-2">{chatResponse.answer || chatResponse}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-base text-blue-900 font-medium break-words mb-2 leading-relaxed">{chatResponse.answer || chatResponse}</div>
                                 {/* Show sources and related concepts if available */}
                                 {Array.isArray(chatResponse.sources) && chatResponse.sources.length > 0 && (
                                   <div className="mt-3">
                                     <div className="font-semibold text-xs text-slate-500 mb-1">Sources:</div>
                                     <ul className="list-disc list-inside text-xs text-slate-700 space-y-1">
                                       {chatResponse.sources.map((src: any, i: number) => (
-                                        <li key={i}>
-                                          <span className="font-medium text-blue-700">{src.event_title}</span>
+                                        <li key={i} className="break-words">
+                                          <span className="font-medium text-blue-700 break-words">{src.event_title}</span>
                                           {src.event_date && (
-                                            <span className="ml-2 text-slate-400">({src.event_date})</span>
+                                            <span className="ml-2 text-slate-400 break-words">({src.event_date})</span>
                                           )}
                                           {src.concept_score && (
                                             <span className="ml-2 text-xs text-orange-600">Score: {src.concept_score.toFixed(2)}</span>
