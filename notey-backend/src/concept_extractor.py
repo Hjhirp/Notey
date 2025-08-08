@@ -51,8 +51,8 @@ async def extract_concepts_from_transcript(transcript: str) -> List[Dict[str, An
     6. Return **ONLY** a JSON array in the following exact format (**no extra text, no explanation**):  
 
     [
-    {"name": "concept name", "score": 4.5},
-    {"name": "another concept", "score": 3.2}
+    {{"name": "concept name", "score": 4.5}},
+    {{"name": "another concept", "score": 3.2}}
     ]
 
     Transcript:

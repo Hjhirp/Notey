@@ -347,3 +347,7 @@ whisper.cpp/models/
 
 # TypeScript build files
 *.tsbuildinfo
+
+
+# Kiro
+.kiro
