@@ -39,7 +39,6 @@ export default function Replay({
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [audioChunks, setAudioChunks] = useState<AudioChunk[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedChunk, setExpandedChunk] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -97,9 +96,6 @@ export default function Replay({
     };
   }, [audioChunks, eventData]); // Re-run when audio source changes
 
-  const toggleChunk = (chunkId: string) => {
-    setExpandedChunk(expandedChunk === chunkId ? null : chunkId);
-  };
 
   const deleteEvent = async () => {
     if (!session?.access_token) {
@@ -154,7 +150,7 @@ export default function Replay({
 
   // Combine all transcripts for the scrollable section
   const fullTranscript = audioChunks
-    .map((chunk, idx) => `[Chunk ${idx + 1}] ${chunk.transcript || "No transcript available"}`)
+    .map(chunk => chunk.transcript || "No transcript available")
     .join("\n\n");
 
   // Combine all summaries
@@ -213,63 +209,6 @@ export default function Replay({
           />
         )}
 
-        {/* Audio Chunks Accordion */}
-        <div className="bg-white rounded-lg border-2 border-[#F28C38] overflow-hidden">
-          <h3 className="bg-[#F28C38] px-3 sm:px-4 py-3 text-base sm:text-lg font-semibold text-[#4A2C18] flex items-center">
-            <span className="w-2 h-2 sm:w-3 sm:h-3 bg-[#4A2C18] rounded-full mr-2"></span>
-            Audio Chunks ({audioChunks.length})
-          </h3>
-          
-          {audioChunks.length > 0 ? (
-            <div className="divide-y divide-[#F4A9A0]">
-              {audioChunks.map((chunk, idx) => (
-                <div key={chunk.id || idx} className="bg-[#FCEED9]">
-                  <button
-                    onClick={() => toggleChunk(chunk.id || idx.toString())}
-                    className="w-full px-3 sm:px-4 py-3 sm:py-4 text-left hover:bg-[#F4A9A0] transition-colors duration-200 flex items-center justify-between touch-manipulation min-h-[48px]"
-                  >
-                    <div className="flex items-center flex-1 min-w-0">
-                      <span className="w-2 h-2 bg-[#F28C38] rounded-full mr-2 sm:mr-3 flex-shrink-0"></span>
-                      <div className="min-w-0 flex-1">
-                        <span className="font-medium text-[#4A2C18] text-sm sm:text-base block">
-                          Chunk {idx + 1}
-                        </span>
-                        <span className="text-xs sm:text-sm text-[#F4A9A0] block sm:inline sm:ml-2">
-                          ({chunk.start_time}s - {(chunk.start_time + chunk.length).toFixed(1)}s)
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-[#F28C38] text-lg sm:text-xl flex-shrink-0 ml-2">
-                      {expandedChunk === (chunk.id || idx.toString()) ? '−' : '+'}
-                    </span>
-                  </button>
-                  
-                  {expandedChunk === (chunk.id || idx.toString()) && (
-                    <div className="px-3 sm:px-4 pb-4 bg-[#FCEED9] space-y-3">
-                      <div className="bg-[#F4A9A0] rounded-lg p-3">
-                        <h5 className="text-sm font-bold text-[#4A2C18] mb-2">Summary</h5>
-                        <p className="text-[#4A2C18] text-sm leading-relaxed">
-                          {chunk.summary || "No summary available"}
-                        </p>
-                      </div>
-                      
-                      <div className="bg-white rounded-lg p-3 border border-[#F4A9A0]">
-                        <h5 className="text-sm font-bold text-[#4A2C18] mb-2">Transcript</h5>
-                        <pre className="text-[#4A2C18] text-xs sm:text-sm whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
-                          {chunk.transcript || "No transcript available"}
-                        </pre>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-4 sm:p-6 text-center bg-[#FCEED9]">
-              <p className="text-[#4A2C18] italic text-sm sm:text-base">No audio chunks found for this event.</p>
-            </div>
-          )}
-        </div>
 
         {/* Scrollable Transcript Section */}
         {fullTranscript && (

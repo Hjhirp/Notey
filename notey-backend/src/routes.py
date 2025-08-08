@@ -192,11 +192,59 @@ async def transcribe_summary_endpoint(payload: AudioURL):
     """
     Endpoint to transcribe audio and generate summary
     """
-    result = await transcribe_and_summarize_pipeline(payload.url)
-    return {
-        "transcript": result.transcript,
-        "summary": result.summary
-    }
+    import logging
+    import asyncio
+    
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            logging.info(f"Transcribe-summary attempt {retry_count + 1} for URL: {payload.url}")
+            
+            result = await transcribe_and_summarize_pipeline(payload.url)
+            
+            # Check if result is null/empty
+            if not result or not result.transcript or not result.summary:
+                retry_count += 1
+                if retry_count < max_retries:
+                    logging.warning(f"Null result received, retrying... (attempt {retry_count}/{max_retries})")
+                    await asyncio.sleep(2)  # Wait 2 seconds before retry
+                    continue
+                else:
+                    logging.error("All retry attempts failed - null results")
+                    raise HTTPException(
+                        status_code=500, 
+                        detail="Failed to respond, compute limit hit - unable to generate transcript and summary after 3 attempts"
+                    )
+            
+            # Success case
+            logging.info(f"Transcribe-summary completed successfully on attempt {retry_count + 1}")
+            return {
+                "transcript": result.transcript,
+                "summary": result.summary
+            }
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            retry_count += 1
+            if retry_count < max_retries:
+                logging.warning(f"Error on attempt {retry_count}: {e}. Retrying...")
+                await asyncio.sleep(2)  # Wait 2 seconds before retry
+                continue
+            else:
+                logging.error(f"All retry attempts failed with error: {e}")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Pipeline failed after 3 attempts: {str(e)}"
+                )
+    
+    # This should never be reached, but just in case
+    raise HTTPException(
+        status_code=500, 
+        detail="Unexpected error in retry logic"
+    )
 
 @router.delete("/events/{event_id}")
 async def delete_event(event_id: str, user_context = Depends(verify_supabase_token)):
