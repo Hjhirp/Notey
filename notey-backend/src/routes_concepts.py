@@ -7,24 +7,12 @@ import os
 
 # Add the parent directory to Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# Also add the root app directory for Railway deployment
-sys.path.append('/app')
 
-try:
-    from models.concept_models import (
-        ConceptUpsertRequest, 
-        ConceptUpsertResponse,
-        ConceptMention
-    )
-except ImportError:
-    # Fallback for Railway deployment
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    from models.concept_models import (
-        ConceptUpsertRequest, 
-        ConceptUpsertResponse,
-        ConceptMention
-    )
+from models.concept_models import (
+    ConceptUpsertRequest, 
+    ConceptUpsertResponse,
+    ConceptMention
+)
 from .supabase_client import supabase_client
 from .database import verify_event_ownership
 from services.auth import verify_supabase_token, UserContext

@@ -342,7 +342,6 @@ config.json
 
 # Whisper.cpp models (large files)
 *.bin
-models/
 whisper.cpp/models/
 
 # TypeScript build files
