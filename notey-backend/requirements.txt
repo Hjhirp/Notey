@@ -26,5 +26,13 @@ pillow>=10.0.0
 # Date and time handling
 python-dateutil>=2.8.0
 
-# Additional dependencies found in the codebase
+# Vector search and ML (lightweight versions)
+numpy>=1.24.0
+scikit-learn>=1.3.0
+sentence-transformers>=2.2.0
+
+# Database
 asyncpg>=0.30.0
+
+# CORS middleware
+fastapi-cors>=0.0.6

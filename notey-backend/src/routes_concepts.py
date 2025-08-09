@@ -2,11 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, List
 import logging
 from uuid import UUID
-import sys
-import os
-
-# Add the parent directory to Python path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.concept_models import (
     ConceptUpsertRequest, 
