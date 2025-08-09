@@ -788,3 +788,139 @@ async def get_user_concepts(
             status_code=500,
             detail=f"Failed to get concepts: {str(e)}"
         )
+
+class EventReportRequest(BaseModel):
+    event_ids: List[str]
+    title: str
+
+@router.post("/events/report-data")
+async def get_events_report_data(
+    request: EventReportRequest,
+    user_context = Depends(verify_supabase_token)
+) -> Dict[str, Any]:
+    """
+    Get comprehensive data for generating a PDF report based on specific event IDs.
+    This is used when generating reports from chat context sources.
+    """
+    try:
+        logger.info(f"Generating report data for events: {request.event_ids}")
+        
+        if not request.event_ids:
+            return {
+                "concept": request.title,
+                "summary": "No events provided for report generation.",
+                "events": []
+            }
+        
+        # 1. Get event details
+        event_ids_formatted = ','.join([f'"{event_id}"' for event_id in request.event_ids])
+        event_filter = {"id": f"in.({event_ids_formatted})"}
+        
+        events = await supabase_client.select(
+            table="events",
+            columns="id,title,started_at,ended_at",
+            filters=event_filter,
+            user_token=user_context.token
+        )
+        
+        if not events:
+            return {
+                "concept": request.title,
+                "summary": "No events found with the provided IDs.",
+                "events": []
+            }
+        
+        # 2. Get all chunks for these events
+        chunk_filter = {"event_id": f"in.({event_ids_formatted})"}
+        chunks = await supabase_client.select(
+            table="audio_chunks",
+            columns="id,event_id,transcript,summary,start_time,length",
+            filters=chunk_filter,
+            order="start_time.asc",
+            user_token=user_context.token
+        )
+        
+        # 3. Get photos for each event
+        photos_by_event = {}
+        if request.event_ids:
+            import httpx
+            from .config import SUPABASE_URL, get_supabase_headers_read
+            
+            async with httpx.AsyncClient() as client:
+                headers = get_supabase_headers_read()
+                
+                for event_id in request.event_ids:
+                    try:
+                        photo_res = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/photos?event_id=eq.{event_id}&order=offset_seconds.asc",
+                            headers=headers
+                        )
+                        photo_res.raise_for_status()
+                        event_photos = photo_res.json()
+                        
+                        if event_photos:
+                            photos_by_event[event_id] = event_photos
+                            logger.info(f"Found {len(event_photos)} photos for event {event_id}")
+                        
+                    except Exception as photo_error:
+                        logger.warning(f"Failed to fetch photos for event {event_id}: {photo_error}")
+                        continue
+        
+        # 4. Build comprehensive report events
+        report_events = []
+        all_transcripts = []
+        
+        for event in events:
+            event_id = event["id"]
+            
+            # Get all transcripts for this event
+            event_chunks = [chunk for chunk in chunks if chunk["event_id"] == event_id]
+            event_transcripts = [chunk["transcript"] for chunk in event_chunks if chunk.get("transcript")]
+            combined_transcript = " ".join(event_transcripts).strip()
+            
+            # Collect for overall summary
+            if combined_transcript:
+                all_transcripts.append(combined_transcript)
+            
+            report_event = {
+                "id": event_id,
+                "title": event["title"],
+                "started_at": event["started_at"],
+                "transcript": combined_transcript or "No transcript available for this event.",
+                "photos": photos_by_event.get(event_id, [])
+            }
+            
+            report_events.append(report_event)
+        
+        # 5. Generate overall summary using AI
+        overall_summary = f"This report covers {len(report_events)} event(s) from your chat conversation context."
+        
+        if all_transcripts:
+            try:
+                # Use Gemini to generate a comprehensive summary
+                summary_prompt = f"""
+Based on the following transcripts from multiple voice recordings that were referenced in a chat conversation, provide a comprehensive 2-3 paragraph summary:
+
+Transcripts:
+{' '.join(all_transcripts[:5000])}  # Limit to avoid token limits
+
+Please provide a concise but informative summary that captures the key points, themes, and insights across all these recordings that were relevant to the user's conversation.
+"""
+                response = model.generate_content(summary_prompt)
+                overall_summary = response.text.strip()
+            except Exception as e:
+                logger.warning(f"Failed to generate AI summary: {e}")
+                # Fallback to basic summary
+        
+        return {
+            "concept": request.title,
+            "summary": overall_summary,
+            "events": report_events
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating report data for events {request.event_ids}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate report data: {str(e)}"
+        )

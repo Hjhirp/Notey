@@ -5,16 +5,28 @@ import config from '../config';
 
 const BACKEND_URL = config.BACKEND_URL;
 
+interface ChatSource {
+  event_id: string;
+  event_title: string;
+  event_date: string;
+}
+
 interface ReportGeneratorProps {
   session: Session | null;
   concept?: string;
   onClose?: () => void;
+  relatedConcepts?: ChatSource[];
 }
 
-export default function ReportGenerator({ session, concept, onClose }: ReportGeneratorProps) {
+export default function ReportGenerator({ session, concept, onClose, relatedConcepts }: ReportGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedConcept, setSelectedConcept] = useState(concept || '');
+  const [selectedConcept, setSelectedConcept] = useState(() => {
+    if (relatedConcepts && relatedConcepts.length > 0) {
+      return relatedConcepts[0].event_title;
+    }
+    return concept || '';
+  });
   const [availableConcepts, setAvailableConcepts] = useState<string[]>([]);
   const [searchingConcepts, setSearchingConcepts] = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
@@ -56,28 +68,56 @@ export default function ReportGenerator({ session, concept, onClose }: ReportGen
     setError(null);
 
     try {
-      // 1. Fetch report data from backend
-      const response = await fetch(
-        `${BACKEND_URL}/chat/concept/${encodeURIComponent(selectedConcept)}/report-data`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      let data: ReportData;
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch report data: ${response.status} ${response.statusText}`);
+      // If we have relatedConcepts (chat sources), use them directly
+      if (relatedConcepts && relatedConcepts.length > 0) {
+        // Generate report using specific event IDs from chat context
+        const eventIds = relatedConcepts.map(source => source.event_id);
+        const response = await fetch(
+          `${BACKEND_URL}/chat/events/report-data`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              event_ids: eventIds,
+              title: selectedConcept
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch report data: ${response.status} ${response.statusText}`);
+        }
+
+        data = await response.json();
+      } else {
+        // Original concept-based report generation
+        const response = await fetch(
+          `${BACKEND_URL}/chat/concept/${encodeURIComponent(selectedConcept)}/report-data`,
+          {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch report data: ${response.status} ${response.statusText}`);
+        }
+
+        data = await response.json();
       }
 
-      const data: ReportData = await response.json();
-
       if (!data.events || data.events.length === 0) {
-        setError(`No events found for the concept "${selectedConcept}". Try a different concept.`);
+        setError(`No events found for the selected sources. Try a different concept or chat session.`);
         return;
       }
 
-      // 2. Set report data and show preview
+      // Set report data and show preview
       setReportData(data);
       setShowPreview(true);
 
@@ -305,50 +345,69 @@ export default function ReportGenerator({ session, concept, onClose }: ReportGen
           <div className="space-y-4">
             {/* Description */}
             <div className="text-sm text-slate-600">
-              Generate a comprehensive PDF report for a specific concept, including all related events, transcripts, and photos.
+              {relatedConcepts && relatedConcepts.length > 0 
+                ? "Generate a comprehensive PDF report using context from your chat conversation."
+                : "Generate a comprehensive PDF report for a specific concept, including all related events, transcripts, and photos."
+              }
             </div>
 
-            {/* Concept Input */}
-            <div>
-              <label htmlFor="concept" className="block text-sm font-medium text-slate-700 mb-2">
-                Select Concept
-              </label>
-              <div className="relative">
-                <input
-                  id="concept"
-                  type="text"
-                  value={selectedConcept}
-                  onChange={(e) => handleConceptChange(e.target.value)}
-                  placeholder="Type to search for concepts..."
-                  disabled={isGenerating}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-notey-orange focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                {searchingConcepts && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin w-4 h-4 border-2 border-notey-orange border-t-transparent rounded-full"></div>
+            {/* Automatic Context Display or Manual Concept Input */}
+            {relatedConcepts && relatedConcepts.length > 0 ? (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Using Context from Chat
+                </label>
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="text-sm text-green-800 font-medium mb-2">
+                    Automatically using: {selectedConcept}
+                  </div>
+                  <div className="text-xs text-green-700">
+                    Report will include {relatedConcepts.length} event{relatedConcepts.length !== 1 ? 's' : ''} from your conversation context
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="concept" className="block text-sm font-medium text-slate-700 mb-2">
+                  Select Concept
+                </label>
+                <div className="relative">
+                  <input
+                    id="concept"
+                    type="text"
+                    value={selectedConcept}
+                    onChange={(e) => handleConceptChange(e.target.value)}
+                    placeholder="Type to search for concepts..."
+                    disabled={isGenerating}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-notey-orange focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {searchingConcepts && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin w-4 h-4 border-2 border-notey-orange border-t-transparent rounded-full"></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Concept suggestions */}
+                {availableConcepts.length > 0 && (
+                  <div className="mt-2 max-h-32 overflow-y-auto border border-slate-200 rounded-lg">
+                    {availableConcepts.map((conceptName, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setSelectedConcept(conceptName);
+                          setAvailableConcepts([]);
+                        }}
+                        disabled={isGenerating}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm text-slate-700 disabled:opacity-50 first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        {conceptName}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
-
-              {/* Concept suggestions */}
-              {availableConcepts.length > 0 && (
-                <div className="mt-2 max-h-32 overflow-y-auto border border-slate-200 rounded-lg">
-                  {availableConcepts.map((conceptName, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSelectedConcept(conceptName);
-                        setAvailableConcepts([]);
-                      }}
-                      disabled={isGenerating}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm text-slate-700 disabled:opacity-50 first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      {conceptName}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Error message */}
             {error && (
@@ -358,7 +417,7 @@ export default function ReportGenerator({ session, concept, onClose }: ReportGen
             )}
 
             {/* Report preview info */}
-            {selectedConcept && !error && (
+            {selectedConcept && !error && !(relatedConcepts && relatedConcepts.length > 0) && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
                 <div className="font-medium mb-1">Report will include:</div>
                 <ul className="text-xs space-y-1">
