@@ -3,13 +3,14 @@ from typing import Dict, Any, List, Optional
 import logging
 from uuid import UUID
 from pydantic import BaseModel
+import httpx
+import os
 
 from .supabase_client import supabase_client
 from services.auth import verify_supabase_token, UserContext
 from .concept_extractor import extract_concepts_from_transcript
 from .vector_search import get_vector_search_service
 import google.generativeai as genai
-import os
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
@@ -92,7 +93,9 @@ async def get_notes_by_concept(
                 "events": [],
                 "total_mentions": 0
             }
-        chunk_filter = {"id": f"in.({','.join(chunk_ids)})"}
+        # Fix Supabase in filter syntax
+        chunk_ids_formatted = ','.join([f'"{chunk_id}"' for chunk_id in chunk_ids])
+        chunk_filter = {"id": f"in.({chunk_ids_formatted})"}
         
         chunks = await supabase_client.select(
             table="audio_chunks",
@@ -110,7 +113,9 @@ async def get_notes_by_concept(
                 "events": [],
                 "total_mentions": 0
             }
-        event_filter = {"id": f"in.({','.join(event_ids)})"}
+        # Fix Supabase in filter syntax
+        event_ids_formatted = ','.join([f'"{event_id}"' for event_id in event_ids])
+        event_filter = {"id": f"in.({event_ids_formatted})"}
         
         events = await supabase_client.select(
             table="events",
@@ -233,7 +238,9 @@ async def chat_with_notes(
                 if all_chunks:
                     # Get event details
                     event_ids = list(set([chunk["event_id"] for chunk in all_chunks]))
-                    event_filter = {"id": f"in.({','.join(event_ids)})"}
+                    # Fix Supabase in filter syntax
+                    event_ids_formatted = ','.join([f'"{event_id}"' for event_id in event_ids])
+                    event_filter = {"id": f"in.({event_ids_formatted})"}
                     events = await supabase_client.select(
                         table="events",
                         columns="id,title,started_at,ended_at",
@@ -416,6 +423,8 @@ async def search_concepts(
     Returns concepts ranked by combined similarity and popularity scores.
     """
     try:
+        logger.info(f"Searching concepts for query: {q}")
+        
         # Get all user's concepts from the database for semantic search
         all_concepts = await supabase_client.select(
             table="concepts",
@@ -425,36 +434,75 @@ async def search_concepts(
         )
         
         if not all_concepts:
+            logger.info("No concepts found for user")
             return []
         
+        logger.info(f"Found {len(all_concepts)} concepts for user")
+        
         # Use vector search for semantic similarity
-        vector_service = get_vector_search_service()
-        similar_concepts = await vector_service.search_concepts(
-            query=q,
-            concepts=all_concepts,
-            limit=limit * 2,  # Get more candidates for mention count filtering
-            threshold=0.2  # Lower threshold for broader matches
-        )
+        try:
+            vector_service = get_vector_search_service()
+            similar_concepts = await vector_service.search_concepts(
+                query=q,
+                concepts=all_concepts,
+                limit=limit * 2,  # Get more candidates for mention count filtering
+                threshold=0.2  # Lower threshold for broader matches
+            )
+            logger.info(f"Vector search returned {len(similar_concepts)} similar concepts")
+        except Exception as vector_error:
+            logger.error(f"Vector search failed: {vector_error}")
+            # Fallback to simple text matching
+            similar_concepts = []
+            for concept in all_concepts:
+                if q.lower() in concept["name"].lower():
+                    similar_concepts.append({
+                        "id": concept["id"],
+                        "name": concept["name"],
+                        "similarity_score": 0.8  # High score for exact matches
+                    })
+            logger.info(f"Fallback text search returned {len(similar_concepts)} concepts")
         
         # Get mention counts for similar concepts
         result = []
         for concept in similar_concepts:
-            mentions = await supabase_client.select(
-                table="chunk_concepts", 
-                columns="id",
-                filters={
-                    "concept_id": f"eq.{concept['id']}",
-                    "user_id": f"eq.{user_context.user_id}"
-                },
-                user_token=user_context.token
-            )
-            
-            result.append({
-                "id": concept["id"],
-                "name": concept["name"],
-                "mention_count": len(mentions),
-                "similarity_score": concept["similarity_score"]
-            })
+            try:
+                # Use direct HTTP client like in database.py to avoid supabase_client issues
+                SUPABASE_URL = os.getenv("SUPABASE_URL")
+                SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+                
+                headers = {
+                    "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json"
+                }
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/chunk_concepts?select=id&concept_id=eq.{concept['id']}&user_id=eq.{user_context.user_id}",
+                        headers=headers
+                    )
+                    
+                    if response.status_code == 200:
+                        mentions = response.json()
+                    else:
+                        logger.warning(f"Failed to get mentions for concept {concept['name']}: {response.status_code}")
+                        mentions = []
+                
+                result.append({
+                    "id": concept["id"],
+                    "name": concept["name"],
+                    "mention_count": len(mentions),
+                    "similarity_score": concept["similarity_score"]
+                })
+            except Exception as mention_error:
+                logger.warning(f"Failed to get mentions for concept {concept['name']}: {mention_error}")
+                # Include concept with 0 mentions rather than failing completely
+                result.append({
+                    "id": concept["id"],
+                    "name": concept["name"],
+                    "mention_count": 0,
+                    "similarity_score": concept["similarity_score"]
+                })
         
         # Sort by combined score: similarity + mention count
         # Normalize similarity (0-1) and mention count, then combine
@@ -474,6 +522,80 @@ async def search_concepts(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to search concepts: {str(e)}"
+        )
+
+@router.get("/concepts")
+async def get_all_concepts(
+    user_context = Depends(verify_supabase_token)
+) -> List[Dict[str, Any]]:
+    """
+    Get all concepts for the current user with their mention counts.
+    Used for showing available concepts for reports.
+    """
+    try:
+        logger.info(f"Getting all concepts for user: {user_context.user_id}")
+        
+        # Get all user's concepts
+        all_concepts = await supabase_client.select(
+            table="concepts",
+            columns="id,name",
+            filters={"user_id": f"eq.{user_context.user_id}"},
+            order="name.asc",
+            user_token=user_context.token
+        )
+        
+        if not all_concepts:
+            return []
+        
+        # Get mention counts for each concept
+        result = []
+        for concept in all_concepts:
+            try:
+                # Use direct HTTP client like in database.py to avoid supabase_client issues
+                SUPABASE_URL = os.getenv("SUPABASE_URL")
+                SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+                
+                headers = {
+                    "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                    "Content-Type": "application/json"
+                }
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(
+                        f"{SUPABASE_URL}/rest/v1/chunk_concepts?select=id&concept_id=eq.{concept['id']}&user_id=eq.{user_context.user_id}",
+                        headers=headers
+                    )
+                    
+                    if response.status_code == 200:
+                        mentions = response.json()
+                    else:
+                        logger.warning(f"Failed to get mentions for concept {concept['name']}: {response.status_code}")
+                        mentions = []
+                
+                result.append({
+                    "id": concept["id"],
+                    "name": concept["name"],
+                    "mention_count": len(mentions)
+                })
+            except Exception as mention_error:
+                logger.warning(f"Failed to get mentions for concept {concept['name']}: {mention_error}")
+                result.append({
+                    "id": concept["id"],
+                    "name": concept["name"],
+                    "mention_count": 0
+                })
+        
+        # Sort by mention count (most popular first)
+        result.sort(key=lambda x: x["mention_count"], reverse=True)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting all concepts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get concepts: {str(e)}"
         )
 
 @router.get("/concept/{concept_name}/report-data")
@@ -498,26 +620,38 @@ async def get_concept_report_data(
                 "events": []
             }
         
-        # 2. Get photos for each event
+        # 2. Get photos for each event using direct HTTP calls like database.py
         event_ids = [event["id"] for event in concept_data["events"]]
         photos_by_event = {}
         
         if event_ids:
-            event_filter = {"event_id": f"in.({','.join(event_ids)})"}
-            all_photos = await supabase_client.select(
-                table="event_photos",
-                columns="id,event_id,photo_url,offset_seconds,created_at",
-                filters=event_filter,
-                order="offset_seconds.asc",
-                user_token=user_context.token
-            )
+            # Use direct HTTP calls like database.py for photos
+            import httpx
+            from .config import SUPABASE_URL, get_supabase_headers_read
             
-            # Group photos by event
-            for photo in all_photos:
-                event_id = photo["event_id"]
-                if event_id not in photos_by_event:
-                    photos_by_event[event_id] = []
-                photos_by_event[event_id].append(photo)
+            async with httpx.AsyncClient() as client:
+                headers = get_supabase_headers_read()
+                
+                for event_id in event_ids:
+                    try:
+                        # Use the same approach as database.py get_event_details
+                        photo_res = await client.get(
+                            f"{SUPABASE_URL}/rest/v1/photos?event_id=eq.{event_id}&order=offset_seconds.asc",
+                            headers=headers
+                        )
+                        photo_res.raise_for_status()
+                        event_photos = photo_res.json()
+                        
+                        if event_photos:
+                            photos_by_event[event_id] = event_photos
+                            logger.info(f"Found {len(event_photos)} photos for event {event_id}")
+                        
+                    except Exception as photo_error:
+                        logger.warning(f"Failed to fetch photos for event {event_id}: {photo_error}")
+                        continue
+                
+                logger.info(f"Total photos found: {sum(len(photos) for photos in photos_by_event.values())}")
+                logger.info(f"Photos grouped by event: {[(k, len(v)) for k, v in photos_by_event.items()]}")
         
         # 3. Build comprehensive report events
         report_events = []
@@ -576,4 +710,81 @@ Please provide a concise but informative summary that captures the key points, t
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate report data: {str(e)}"
+        )
+
+@router.get("/concepts")
+async def get_user_concepts(
+    user_context = Depends(verify_supabase_token)
+) -> Dict[str, Any]:
+    """
+    Get all concepts available for the user, ordered by frequency of use.
+    This is used for populating concept suggestions in the frontend.
+    """
+    try:
+        logger.info(f"Getting concepts for user: {user_context.user_id}")
+        
+        # Get all concepts for the user with their mention counts
+        concepts = await supabase_client.select(
+            table="concepts",
+            columns="name,description",
+            filters={"user_id": f"eq.{user_context.user_id}"},
+            user_token=user_context.token
+        )
+        
+        if not concepts:
+            return {"concepts": []}
+        
+        # Get mention counts for each concept
+        concept_names = [c["name"] for c in concepts]
+        concept_mentions = {}
+        
+        # Query chunk_concepts to get mention counts
+        for concept_name in concept_names:
+            # Find concept by name
+            concept_data = await supabase_client.select(
+                table="concepts", 
+                columns="id",
+                filters={
+                    "name": f"eq.{concept_name}",
+                    "user_id": f"eq.{user_context.user_id}"
+                },
+                user_token=user_context.token
+            )
+            
+            if concept_data:
+                concept_id = concept_data[0]["id"]
+                
+                # Count mentions in chunk_concepts
+                mentions = await supabase_client.select(
+                    table="chunk_concepts",
+                    columns="id",
+                    filters={"concept_id": f"eq.{concept_id}"},
+                    user_token=user_context.token
+                )
+                
+                concept_mentions[concept_name] = len(mentions)
+        
+        # Combine concept data with mention counts and sort by frequency
+        result_concepts = []
+        for concept in concepts:
+            name = concept["name"]
+            result_concepts.append({
+                "name": name,
+                "description": concept.get("description", ""),
+                "mention_count": concept_mentions.get(name, 0)
+            })
+        
+        # Sort by mention count (most used first), then alphabetically
+        result_concepts.sort(key=lambda x: (-x["mention_count"], x["name"]))
+        
+        return {
+            "concepts": result_concepts,
+            "total_count": len(result_concepts)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting user concepts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get concepts: {str(e)}"
         )

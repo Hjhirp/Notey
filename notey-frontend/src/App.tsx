@@ -8,6 +8,8 @@ import Events from "./components/Events";
 import Replay from "./components/Replay";
 import Navbar from "./components/Navbar";
 import NotesGraph3D from "./components/NotesGraph3D";
+import ReportGenerator from "./components/ReportGenerator";
+import Chatbot from "./components/Chatbot";
 import ReactMarkdown from 'react-markdown';
 
 type ViewType = 'events' | 'chat';
@@ -24,6 +26,8 @@ function App() {
   const [chatMessages, setChatMessages] = useState<Array<{id: string, type: 'user' | 'bot', content: string, timestamp: Date, sources?: any[], related_concepts?: string[]}>>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [chatSessions, setChatSessions] = useState<Array<{id: string, title: string, updated_at: string, message_count: number}>>([]);
+  const [showReportGenerator, setShowReportGenerator] = useState(false);
+  const [selectedConcept, setSelectedConcept] = useState<string>('');
 
   const handleEventDeleted = (deletedEventId: string) => {
     if (selectedEventId === deletedEventId) {
@@ -275,6 +279,12 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Handle report generation
+  const handleReportGeneration = (concept?: string) => {
+    setSelectedConcept(concept || '');
+    setShowReportGenerator(true);
+  };
 
   // Load chat sessions when user logs in
   useEffect(() => {
@@ -552,18 +562,32 @@ function App() {
                                   <p className="text-xs text-slate-500">Chat History</p>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => {
-                                  setShowChatHistory(false);
-                                  setChatMessages([]);
-                                }}
-                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                title="Back to Graph"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                              </button>
+                              
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleReportGeneration()}
+                                  className="flex items-center space-x-2 px-3 py-2 bg-notey-orange text-white text-sm font-medium rounded-lg hover:bg-notey-orange/90 transition-colors"
+                                  title="Generate Report"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  <span>Report</span>
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    setShowChatHistory(false);
+                                    setChatMessages([]);
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                  title="Back to Graph"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
 
                             {/* Messages */}
@@ -662,6 +686,27 @@ function App() {
                                                         className="inline-block bg-orange-100 text-orange-700 hover:bg-orange-200 px-2 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer"
                                                       >
                                                         {concept}
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* Report Generation Actions */}
+                                              {message.related_concepts && message.related_concepts.length > 0 && (
+                                                <div className="mt-2">
+                                                  <div className="text-xs font-semibold text-slate-600 mb-1">Actions:</div>
+                                                  <div className="flex flex-wrap gap-2">
+                                                    {message.related_concepts.map((concept: string, i: number) => (
+                                                      <button
+                                                        key={`report-${i}`}
+                                                        onClick={() => handleReportGeneration(concept)}
+                                                        className="inline-flex items-center space-x-1 bg-notey-orange/10 text-notey-orange hover:bg-notey-orange/20 px-2 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer"
+                                                      >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                        </svg>
+                                                        <span>Generate Report</span>
                                                       </button>
                                                     ))}
                                                   </div>
@@ -825,6 +870,16 @@ function App() {
           </div>
         </div>
       )}
+      
+      {/* Report Generator Modal */}
+      {showReportGenerator && (
+        <ReportGenerator
+          session={session}
+          concept={selectedConcept}
+          onClose={() => setShowReportGenerator(false)}
+        />
+      )}
+      
       <Analytics />
     </div>
   );

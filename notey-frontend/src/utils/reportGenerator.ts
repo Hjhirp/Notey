@@ -121,7 +121,7 @@ export class ReportGenerator {
     this.pdf.setFont('helvetica', 'italic');
     
     const photoText = photoCount === 1 ? '1 photo captured' : `${photoCount} photos captured`;
-    this.pdf.text(`📸 ${photoText} during this event`, this.margin, this.yPosition);
+    this.pdf.text(`[PHOTO] ${photoText} during this event`, this.margin, this.yPosition);
     this.yPosition += 15;
   }
 
