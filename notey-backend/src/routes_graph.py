@@ -2,6 +2,11 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict, Any, List, Optional
 import logging
 from uuid import UUID
+import sys
+import os
+
+# Add the parent directory to Python path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.concept_models import GraphExportResponse, GraphNode, GraphLink
 from .supabase_client import supabase_client

@@ -128,7 +128,7 @@ export async function fetchWithProgress(
     onProgress(loaded, total);
   }
   
-  return new Blob(chunks);
+  return new Blob(chunks as BlobPart[]);
 }
 
 /**

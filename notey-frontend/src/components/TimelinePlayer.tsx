@@ -39,7 +39,7 @@ export default function TimelinePlayer({
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const filmstripRef = useRef<HTMLDivElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const photoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Memoized sorted photos

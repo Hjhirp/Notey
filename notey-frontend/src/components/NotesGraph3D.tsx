@@ -171,9 +171,10 @@ export default function NotesGraph3D({ session, eventId, className = '', focusCo
     const graph = new ForceGraph3D(containerRef.current)
       .backgroundColor('#F8FAFC') // slate-50 background
       .showNavInfo(false)
-      .nodeColor((node: GraphNode) => {
+      .nodeColor((node: any) => {
         // Use consistent theme colors for nodes
-        switch (node.type) {
+        const graphNode = node as GraphNode;
+        switch (graphNode.type) {
           case 'event':
             return '#3B82F6'; // blue-500
           case 'concept':
