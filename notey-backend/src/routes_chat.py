@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel
 import httpx
 import os
+import re
 
 from .supabase_client import supabase_client
 from services.auth import verify_supabase_token, UserContext
@@ -29,8 +30,21 @@ class QuestionRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    sources: List[Dict[str, Any]]
-    related_concepts: List[str]
+    sources: List[Dict[str, Any]] = []
+    related_concepts: List[str] = []
+
+class LabelOperationRequest(BaseModel):
+    query: str
+    event_id: Optional[str] = None
+
+class LabelOperationResponse(BaseModel):
+    answer: str
+    operation: Optional[str] = None
+    label_name: Optional[str] = None
+    label_color: Optional[str] = None
+    label_icon: Optional[str] = None
+    event_id: Optional[str] = None
+    sources: List[Dict[str, Any]] = []
 
 @router.get("/concept/{concept_name}/notes")
 async def get_notes_by_concept(
@@ -791,7 +805,12 @@ async def get_user_concepts(
 
 class EventReportRequest(BaseModel):
     event_ids: List[str]
-    title: str
+    title: Optional[str] = None
+
+class ExportToGoogleDocsRequest(BaseModel):
+    concept_name: Optional[str] = None
+    event_ids: Optional[List[str]] = None
+    title: Optional[str] = None
 
 @router.post("/events/report-data")
 async def get_events_report_data(
@@ -923,4 +942,375 @@ Please provide a concise but informative summary that captures the key points, t
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate report data: {str(e)}"
+        )
+
+@router.post("/export/google-docs")
+async def export_chat_to_google_docs(
+    request: ExportToGoogleDocsRequest,
+    user_context = Depends(verify_supabase_token)
+) -> Dict[str, Any]:
+    """
+    Export chat report data directly to Google Docs.
+    Can export either by concept_name or by specific event_ids.
+    """
+    try:
+        # Import here to avoid circular imports
+        from .integrations.google_docs_service import google_docs_service
+        from .integrations.oauth_handler import oauth_handler
+        
+        user_id = str(user_context.user_id)
+        
+        # Get user's Google tokens
+        tokens = await oauth_handler.get_user_tokens(user_id, "google_docs")
+        
+        if not tokens:
+            raise HTTPException(
+                status_code=401,
+                detail="Google Docs integration not connected. Please connect your Google account first."
+            )
+        
+        # Get report data based on request type
+        if request.concept_name:
+            # Export concept-based report
+            report_data = await get_concept_report_data(request.concept_name, user_context)
+        elif request.event_ids:
+            # Export event-based report
+            event_request = EventReportRequest(
+                event_ids=request.event_ids,
+                title=request.title or "Chat Report"
+            )
+            report_data = await get_events_report_data(event_request, user_context)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Either concept_name or event_ids must be provided"
+            )
+        
+        # Check if token is expired and refresh if needed
+        if await oauth_handler.is_token_expired(tokens):
+            if tokens.get("refresh_token"):
+                try:
+                    refreshed_tokens = google_docs_service.refresh_access_token(tokens["refresh_token"])
+                    updated_tokens = {**tokens, **refreshed_tokens}
+                    await oauth_handler.store_user_tokens(user_id, "google_docs", updated_tokens)
+                    tokens = updated_tokens
+                except Exception as refresh_error:
+                    logger.error(f"Failed to refresh Google tokens: {refresh_error}")
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Google authentication expired. Please reconnect your Google account."
+                    )
+            else:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Google authentication expired. Please reconnect your Google account."
+                )
+        
+        # Create Google Doc
+        result = google_docs_service.create_document_from_report(tokens, report_data)
+        
+        logger.info(f"Successfully exported chat report to Google Docs for user {user_id}")
+        
+        return {
+            "success": True,
+            "document_id": result["document_id"],
+            "document_url": result["document_url"],
+            "title": result["title"],
+            "created_at": result["created_at"],
+            "provider": "google_docs",
+            "report_type": "concept" if request.concept_name else "events"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting chat to Google Docs: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export to Google Docs: {str(e)}"
+        )
+
+@router.post("/labels/operate", response_model=LabelOperationResponse)
+async def handle_label_operations(
+    request: LabelOperationRequest,
+    user_context = Depends(verify_supabase_token)
+) -> LabelOperationResponse:
+    """
+    Handle label operations through chat interface.
+    Can create, remove, or assign labels based on natural language commands.
+    """
+    try:
+        query = request.query.lower()
+        event_id = request.event_id
+        
+        # Parse the query to determine the operation
+        operation = None
+        label_name = None
+        label_color = "#8E8E93"  # Default color
+        label_icon = "tag"  # Default icon
+        
+        # Check for create label operations
+        if any(phrase in query for phrase in ["create label", "make label", "add label", "new label"]):
+            operation = "create"
+            # Extract label name from query
+            if "called" in query:
+                label_name = query.split("called")[-1].strip().split()[0]
+            elif "named" in query:
+                label_name = query.split("named")[-1].strip().split()[0]
+            elif "for" in query:
+                label_name = query.split("for")[-1].strip().split()[0]
+            else:
+                # Try to extract from common patterns
+                words = query.split()
+                for i, word in enumerate(words):
+                    if word in ["label", "tag"] and i + 1 < len(words):
+                        label_name = words[i + 1]
+                        break
+            
+            # Extract color if specified
+            color_match = re.search(r'#([0-9a-fA-F]{6})', query)
+            if color_match:
+                label_color = f"#{color_match.group(1)}"
+            
+            # Extract icon if specified
+            icon_mapping = {
+                "work": "briefcase",
+                "personal": "user",
+                "meeting": "users",
+                "idea": "lightbulb",
+                "task": "check-square",
+                "important": "star",
+                "urgent": "exclamation-triangle",
+                "project": "folder",
+                "note": "sticky-note",
+                "reminder": "bell"
+            }
+            
+            for icon_key, icon_value in icon_mapping.items():
+                if icon_key in query:
+                    label_icon = icon_value
+                    break
+        
+        # Check for remove label operations
+        elif any(phrase in query for phrase in ["remove label", "delete label", "unlabel", "take off label"]):
+            operation = "remove"
+            # Extract label name from query
+            if "label" in query:
+                parts = query.split("label")
+                if len(parts) > 1:
+                    label_name = parts[1].strip().split()[0]
+        
+        # Check for assign label operations
+        elif any(phrase in query for phrase in ["assign label", "add label", "tag with", "mark as"]):
+            operation = "assign"
+            # Extract label name from query
+            if "label" in query:
+                parts = query.split("label")
+                if len(parts) > 1:
+                    label_name = parts[1].strip().split()[0]
+        
+        # If no operation detected, try to infer from context
+        if not operation:
+            if "label" in query and any(word in query for word in ["create", "make", "add", "new"]):
+                operation = "create"
+            elif "label" in query and any(word in query for word in ["remove", "delete", "unlabel"]):
+                operation = "remove"
+            elif "label" in query and any(word in query for word in ["assign", "add", "tag", "mark"]):
+                operation = "assign"
+        
+        # Generate appropriate response
+        if operation == "create":
+            if not label_name:
+                return LabelOperationResponse(
+                    answer="I can help you create a label! Please specify what you'd like to call it. For example: 'Create a label called work' or 'Make a new label for meetings'",
+                    operation="create"
+                )
+            
+            # Check if label already exists
+            existing_labels = await supabase_client.select(
+                table="labels",
+                columns="id,name",
+                filters={"user_id": f"eq.{user_context.user_id}", "name": f"eq.{label_name}"},
+                user_token=user_context.token
+            )
+            
+            if existing_labels:
+                return LabelOperationResponse(
+                    answer=f"A label called '{label_name}' already exists. You can use it to tag your events, or I can help you create a different label.",
+                    operation="create"
+                )
+            
+            # Create the label
+            try:
+                label_data = {
+                    "user_id": user_context.user_id,
+                    "name": label_name,
+                    "color": label_color,
+                    "icon": label_icon
+                }
+                
+                created_label = await supabase_client.insert(
+                    table="labels",
+                    data=label_data,
+                    user_token=user_context.token
+                )
+                
+                return LabelOperationResponse(
+                    answer=f"✅ I've successfully created a new label called '{label_name}' for you! You can now use it to tag your events. The label has been created with a {label_color} color and {label_icon} icon.",
+                    operation="create",
+                    label_name=label_name,
+                    label_color=label_color,
+                    label_icon=label_icon
+                )
+            except Exception as e:
+                logger.error(f"Failed to create label: {e}")
+                return LabelOperationResponse(
+                    answer=f"Sorry, I encountered an error while creating the '{label_name}' label. Please try again or create it manually in the label manager.",
+                    operation="create"
+                )
+        
+        elif operation == "remove":
+            if not label_name:
+                return LabelOperationResponse(
+                    answer="I can help you remove a label! Please specify which label you'd like to remove. For example: 'Remove the work label' or 'Delete the meeting label'",
+                    operation="remove"
+                )
+            
+            # Check if label exists
+            existing_labels = await supabase_client.select(
+                table="labels",
+                columns="id,name",
+                filters={"user_id": f"eq.{user_context.user_id}", "name": f"eq.{label_name}"},
+                user_token=user_context.token
+            )
+            
+            if not existing_labels:
+                return LabelOperationResponse(
+                    answer=f"I couldn't find a label called '{label_name}'. Please check the label name and try again.",
+                    operation="remove"
+                )
+            
+            # Remove the label
+            try:
+                label_id = existing_labels[0]["id"]
+                
+                # First remove all label links
+                await supabase_client.delete(
+                    table="label_links",
+                    filters={"label_id": f"eq.{label_id}", "user_id": f"eq.{user_context.user_id}"},
+                    user_token=user_context.token
+                )
+                
+                # Then delete the label
+                await supabase_client.delete(
+                    table="labels",
+                    filters={"id": f"eq.{label_id}", "user_id": f"eq.{user_context.user_id}"},
+                    user_token=user_context.token
+                )
+                
+                return LabelOperationResponse(
+                    answer=f"✅ I've successfully removed the '{label_name}' label and all its assignments from your events.",
+                    operation="remove",
+                    label_name=label_name
+                )
+            except Exception as e:
+                logger.error(f"Failed to remove label: {e}")
+                return LabelOperationResponse(
+                    answer=f"Sorry, I encountered an error while removing the '{label_name}' label. Please try again or remove it manually in the label manager.",
+                    operation="remove"
+                )
+        
+        elif operation == "assign":
+            if not label_name:
+                return LabelOperationResponse(
+                    answer="I can help you assign a label! Please specify which label you'd like to assign. For example: 'Assign the work label' or 'Tag this with meeting'",
+                    operation="assign"
+                )
+            
+            # Check if label exists
+            existing_labels = await supabase_client.select(
+                table="labels",
+                columns="id,name",
+                filters={"user_id": f"eq.{user_context.user_id}", "name": f"eq.{label_name}"},
+                user_token=user_context.token
+            )
+            
+            if not existing_labels:
+                return LabelOperationResponse(
+                    answer=f"I couldn't find a label called '{label_name}'. Would you like me to create it for you first?",
+                    operation="assign",
+                    label_name=label_name
+                )
+            
+            if not event_id:
+                return LabelOperationResponse(
+                    answer=f"I can assign the '{label_name}' label to an event. Please select an event first, or tell me which event you'd like to label.",
+                    operation="assign",
+                    label_name=label_name
+                )
+            
+            # Check if label is already assigned
+            existing_assignments = await supabase_client.select(
+                table="label_links",
+                columns="id",
+                filters={
+                    "label_id": f"eq.{existing_labels[0]['id']}", 
+                    "entity_type": "eq.event",
+                    "entity_id": f"eq.{event_id}",
+                    "user_id": f"eq.{user_context.user_id}"
+                },
+                user_token=user_context.token
+            )
+            
+            if existing_assignments:
+                return LabelOperationResponse(
+                    answer=f"The '{label_name}' label is already assigned to this event.",
+                    operation="assign",
+                    label_name=label_name,
+                    event_id=event_id
+                )
+            
+            # Assign the label
+            try:
+                label_link_data = {
+                    "user_id": user_context.user_id,
+                    "label_id": existing_labels[0]["id"],
+                    "entity_type": "event",
+                    "entity_id": event_id
+                }
+                
+                await supabase_client.insert(
+                    table="label_links",
+                    data=label_link_data,
+                    user_token=user_context.token
+                )
+                
+                return LabelOperationResponse(
+                    answer=f"✅ I've successfully assigned the '{label_name}' label to this event!",
+                    operation="assign",
+                    label_name=label_name,
+                    event_id=event_id
+                )
+            except Exception as e:
+                logger.error(f"Failed to assign label: {e}")
+                return LabelOperationResponse(
+                    answer=f"Sorry, I encountered an error while assigning the '{label_name}' label. Please try again or assign it manually.",
+                    operation="assign"
+                )
+        
+        # If no specific operation detected, provide help
+        return LabelOperationResponse(
+            answer="I can help you manage labels! Here are some things you can ask me to do:\n\n" +
+                   "• Create labels: 'Create a label called work' or 'Make a new label for meetings'\n" +
+                   "• Remove labels: 'Remove the work label' or 'Delete the meeting label'\n" +
+                   "• Assign labels: 'Assign the work label' or 'Tag this with meeting'\n\n" +
+                   "What would you like to do with labels?",
+            operation="help"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in label operations endpoint: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process label operation: {str(e)}"
         )

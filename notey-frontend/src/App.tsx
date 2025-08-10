@@ -10,6 +10,8 @@ import Navbar from "./components/Navbar";
 import NotesGraph3D from "./components/NotesGraph3D";
 import ReportGenerator from "./components/ReportGenerator";
 import Chatbot from "./components/Chatbot";
+import IntegrationsSettings from "./components/IntegrationsSettings";
+
 import ReactMarkdown from 'react-markdown';
 
 type ViewType = 'events' | 'chat';
@@ -29,6 +31,7 @@ function App() {
   const [showReportGenerator, setShowReportGenerator] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState<string>('');
   const [chatSources, setChatSources] = useState<Array<{event_id: string, event_title: string, event_date: string}>>([]);
+  const [showIntegrationsSettings, setShowIntegrationsSettings] = useState(false);
 
   const handleEventDeleted = (deletedEventId: string) => {
     if (selectedEventId === deletedEventId) {
@@ -203,23 +206,45 @@ function App() {
     await saveMessage(sessionId, 'user', userMessage.content);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/ask`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          query: userMessage.content
-        }),
-      });
+      // Check if this is a label operation query
+      const isLabelQuery = /label|tag|mark|unlabel|remove.*label|delete.*label|create.*label|make.*label|add.*label|new.*label|assign.*label/i.test(chatQuery);
+      
+      let response;
+      let data;
+      
+      if (isLabelQuery) {
+        // Route to label operations endpoint
+        response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/labels/operate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            query: chatQuery,
+            event_id: selectedEventId
+          }),
+        });
+      } else {
+        // Route to regular chat endpoint
+        response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/chat/ask`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            query: userMessage.content
+          }),
+        });
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      data = await response.json();
       
       const botMessage = {
         id: `bot-${Date.now()}`,
@@ -234,6 +259,15 @@ function App() {
       
       // Save bot message to database
       await saveMessage(sessionId, 'bot', botMessage.content, botMessage.sources, botMessage.related_concepts);
+      
+      // Handle label operations if needed
+      if (isLabelQuery && data.operation) {
+        // Refresh events to show updated labels
+        if (data.operation === 'create' || data.operation === 'remove' || data.operation === 'assign') {
+          // Trigger a refresh of the events list
+          window.location.reload();
+        }
+      }
       
       // Focus on the most relevant concept node if available
       if (data.related_concepts && data.related_concepts.length > 0) {
@@ -256,7 +290,7 @@ function App() {
     } finally {
       setChatLoading(false);
     }
-  }, [chatQuery, chatLoading, session?.access_token, currentSessionId, createChatSession, saveMessage]);
+  }, [chatQuery, chatLoading, session?.access_token, currentSessionId, createChatSession, saveMessage, selectedEventId]);
 
 
   useEffect(() => {
@@ -355,7 +389,11 @@ function App() {
   return (
     <div className="min-h-screen bg-white">
       {/* Enhanced Navbar */}
-      <Navbar session={session} setSession={setSession} />
+      <Navbar 
+        session={session} 
+        setSession={setSession} 
+        onOpenSettings={() => setShowIntegrationsSettings(true)}
+      />
       
       {!session ? (
         /* Landing Page - Notion-like Hero Section */
@@ -687,6 +725,14 @@ function App() {
             setChatSources([]); // Clear chat sources when closing
           }}
           relatedConcepts={chatSources.length > 0 ? chatSources : undefined}
+        />
+      )}
+
+      {/* Integrations Settings Modal */}
+      {showIntegrationsSettings && (
+        <IntegrationsSettings
+          session={session}
+          onClose={() => setShowIntegrationsSettings(false)}
         />
       )}
       

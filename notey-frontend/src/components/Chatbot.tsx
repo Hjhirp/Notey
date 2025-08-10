@@ -351,7 +351,15 @@ export default function Chatbot(props: ChatbotProps) {
         
         {/* Quick suggestions */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {['What patterns do you see in my [topic] notes?', 'Help me connect ideas about [topic]', 'What should I explore next about [subject]?', 'Summarize my key insights on [topic]'].map((suggestion) => (
+          {[
+            'What patterns do you see in my [topic] notes?', 
+            'Help me connect ideas about [topic]', 
+            'What should I explore next about [subject]?', 
+            'Summarize my key insights on [topic]',
+            'Create a label called work',
+            'Assign the meeting label to this event',
+            'Remove the old label'
+          ].map((suggestion) => (
             <button
               key={suggestion}
               onClick={() => setChatQuery(suggestion)}

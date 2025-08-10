@@ -174,6 +174,29 @@ async def get_all_events(user_context = Depends(verify_supabase_token)):
     return await database.get_user_events(user_context.user_id)
 
 
+@router.get("/events/{event_id}/labels")
+async def get_event_labels(event_id: str, user_context = Depends(verify_supabase_token)):
+    """Get all labels attached to a specific event"""
+    try:
+        # Verify event ownership
+        if not await database.verify_event_exists_and_ownership(event_id, user_context.user_id):
+            raise HTTPException(
+                status_code=404,
+                detail="Event not found or you don't have permission to view it"
+            )
+        
+        # Get labels for the event
+        labels = await database.get_entity_labels("event", event_id, user_context.user_id)
+        return labels
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get event labels: {str(e)}"
+        )
+
+
 @router.get("/audio-chunks")
 async def get_audio_chunks(event_id: str):
     """Get all audio chunks for a specific event"""

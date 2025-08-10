@@ -1,8 +1,12 @@
 # Storage service
 import os
+import logging
 from dotenv import load_dotenv
 import aiofiles
 import httpx
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -136,7 +140,7 @@ async def delete_event_storage_files(event_id: str, user_id: str) -> bool:
         return audio_success and photo_success
         
     except Exception as e:
-        pass
+        logger.error(f"Failed to delete event storage files for event {event_id}: {e}")
         return False
 
 
@@ -175,13 +179,13 @@ async def delete_storage_folder_supabase(bucket: str, prefix: str, user_id: str)
         list_result = supabase.storage.from_(bucket).list(prefix)
         
         if hasattr(list_result, 'error') and list_result.error:
-            pass
+            logger.error(f"Failed to list files in bucket {bucket} with prefix {prefix}: {list_result.error}")
             return False
             
         files = list_result if isinstance(list_result, list) else []
         
         if not files:
-            pass
+            logger.info(f"No files found in bucket {bucket} with prefix {prefix}")
             return True
             
         
@@ -201,14 +205,14 @@ async def delete_storage_folder_supabase(bucket: str, prefix: str, user_id: str)
             delete_result = supabase.storage.from_(bucket).remove(file_paths)
             
             if hasattr(delete_result, 'error') and delete_result.error:
-                pass
+                logger.error(f"Failed to delete files in bucket {bucket}: {delete_result.error}")
                 return False
             
         
         return True
         
     except Exception as e:
-        pass
+        logger.error(f"Failed to delete storage folder {prefix} in bucket {bucket}: {e}")
         # Fallback to direct API approach
         return await delete_storage_folder_fallback(bucket, prefix, user_id)
 
