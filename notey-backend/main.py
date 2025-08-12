@@ -10,6 +10,7 @@ from src.routes_chat import router as chat_router
 from src.routes_chat_history import router as chat_history_router
 from src.routes_labels import router as labels_router
 from src.routes_integrations import router as integrations_router
+from src.routes_export import router as export_router
 
 # Load environment variables
 load_dotenv()
@@ -59,3 +60,4 @@ app.include_router(chat_router)
 app.include_router(chat_history_router)
 app.include_router(labels_router)
 app.include_router(integrations_router)
+app.include_router(export_router)

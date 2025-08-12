@@ -218,22 +218,18 @@ export default function Chatbot(props: ChatbotProps) {
                               </div>
                             )}
 
-                            {/* Report Generation Actions */}
+                            {/* Related Concepts Display Only */}
                             {message.related_concepts && message.related_concepts.length > 0 && (
                               <div className="mt-2">
-                                <div className="text-xs font-semibold text-slate-600 mb-1">Actions:</div>
+                                <div className="text-xs font-semibold text-slate-600 mb-1">Related Concepts:</div>
                                 <div className="flex flex-wrap gap-2">
                                   {message.related_concepts.map((concept: string, i: number) => (
-                                    <button
-                                      key={`report-${i}`}
-                                      onClick={() => handleReportGeneration(concept, currentSessionId || undefined)}
-                                      className="inline-flex items-center space-x-1 bg-notey-orange/10 text-notey-orange hover:bg-notey-orange/20 px-2 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer"
+                                    <span
+                                      key={`concept-${i}`}
+                                      className="inline-flex items-center bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium"
                                     >
-                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                      </svg>
-                                      <span>Generate Report</span>
-                                    </button>
+                                      {concept}
+                                    </span>
                                   ))}
                                 </div>
                               </div>

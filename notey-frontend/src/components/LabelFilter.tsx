@@ -24,12 +24,20 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState<Label | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const [newLabel, setNewLabel] = useState({
     name: '',
     color: '#8E8E93',
     icon: 'tag',
   } as LabelCreateRequest);
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    color: '#8E8E93',
+    icon: 'tag',
+  });
 
   useEffect(() => {
     if (session) {
@@ -74,6 +82,74 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
     }
   };
 
+  const handleEditLabel = async () => {
+    if (!editingLabel || !editForm.name.trim()) return;
+
+    try {
+      setError(null);
+      const updatedLabel = await labelsApi.updateLabel(editingLabel.id, editForm, session);
+      setLabels(labels.map(label => label.id === editingLabel.id ? updatedLabel : label));
+      setEditingLabel(null);
+      setEditForm({ name: '', color: '#8E8E93', icon: 'tag' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update label');
+    }
+  };
+
+  const handleDeleteLabel = async (labelId: string) => {
+    const labelToDelete = labels.find(l => l.id === labelId);
+    const labelName = labelToDelete?.name || 'this label';
+    
+    if (!confirm(`Are you sure you want to delete "${labelName}"? This will remove the label from all events but keep the events themselves. This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(labelId);
+    try {
+      setError(null);
+      // Delete from backend (this handles cascading deletion from Supabase)
+      await labelsApi.deleteLabel(labelId, session);
+      
+      // Update local state
+      setLabels(labels.filter(label => label.id !== labelId));
+      
+      // Remove from selected labels if it was selected
+      if (selectedLabels.includes(labelId)) {
+        onLabelsChange(selectedLabels.filter(id => id !== labelId));
+      }
+      
+      // Trigger a refresh of events to reflect the label removal
+      // This ensures that events no longer show the deleted label
+      if (window.location.pathname.includes('events')) {
+        window.dispatchEvent(new CustomEvent('labelDeleted', { detail: { labelId } }));
+      }
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete label');
+      console.error('Failed to delete label:', err);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const startEditing = (label: Label) => {
+    setEditingLabel(label);
+    setEditForm({
+      name: label.name,
+      color: label.color,
+      icon: label.icon,
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingLabel(null);
+    setEditForm({ name: '', color: '#8E8E93', icon: 'tag' });
+  };
+
+  const resetAllFilters = () => {
+    onLabelsChange([]);
+  };
+
   const getSelectedLabelsText = () => {
     if (selectedLabels.length === 0) return 'Filter by labels';
     if (selectedLabels.length === 1) {
@@ -94,7 +170,7 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1"
           style={{ backgroundColor: `${label.color}20`, color: label.color }}
         >
-          <span className="mr-1">{label.icon}</span>
+          <span className="mr-1">{label.icon === 'tag' ? '🏷️' : label.icon}</span>
           {label.name}
           <button
             onClick={(e) => {
@@ -136,7 +212,7 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+        <div className="absolute z-50 w-full min-w-64 max-w-80 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           <div className="p-3 border-b border-slate-200">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-slate-900">Labels</h3>
@@ -208,32 +284,109 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
             ) : (
               <div className="space-y-1">
                 {labels.map((label) => (
-                  <label
-                    key={label.id}
-                    className="flex items-center px-2 py-2 rounded hover:bg-slate-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedLabels.includes(label.id)}
-                      onChange={() => toggleLabel(label.id)}
-                      className="mr-3 rounded border-slate-300 text-notey-orange focus:ring-notey-orange"
-                    />
-                    <span
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-2"
-                      style={{ backgroundColor: `${label.color}20`, color: label.color }}
-                    >
-                      <span className="mr-1">{label.icon}</span>
-                      {label.name}
-                    </span>
-                  </label>
+                  <div key={label.id} className="group">
+                    {editingLabel?.id === label.id ? (
+                      // Edit mode
+                      <div className="p-2 bg-slate-50 rounded-lg space-y-2">
+                        <input
+                          type="text"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-notey-orange"
+                          placeholder="Label name"
+                        />
+                        <div className="flex items-center space-x-2">
+                          <ColorPicker
+                            selectedColor={editForm.color}
+                            onColorChange={(color) => setEditForm({ ...editForm, color })}
+                            className="flex-1"
+                          />
+                          <IconSelector
+                            selectedIcon={editForm.icon}
+                            onIconChange={(icon) => setEditForm({ ...editForm, icon })}
+                            className="flex-1"
+                          />
+                        </div>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={handleEditLabel}
+                            disabled={!editForm.name.trim()}
+                            className="flex-1 px-2 py-1 text-xs bg-notey-orange text-white rounded hover:bg-notey-orange/80 disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="flex-1 px-2 py-1 text-xs border border-slate-300 text-slate-700 rounded hover:bg-slate-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Normal mode
+                      <div className="flex items-center px-2 py-2 rounded hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          checked={selectedLabels.includes(label.id)}
+                          onChange={() => toggleLabel(label.id)}
+                          className="mr-3 rounded border-slate-300 text-notey-orange focus:ring-notey-orange"
+                        />
+                        <span
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium flex-1 mr-2"
+                          style={{ backgroundColor: `${label.color}20`, color: label.color }}
+                        >
+                          <span className="mr-1">{label.icon === 'tag' ? '🏷️' : label.icon}</span>
+                          {label.name}
+                        </span>
+                        <div className="opacity-0 group-hover:opacity-100 flex space-x-1">
+                          <button
+                            onClick={() => startEditing(label)}
+                            className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                            title="Edit label"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLabel(label.id)}
+                            disabled={isDeleting === label.id}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded disabled:opacity-50"
+                            title="Delete label"
+                          >
+                            {isDeleting === label.id ? (
+                              <div className="animate-spin w-3 h-3 border border-slate-400 border-t-transparent rounded-full"></div>
+                            ) : (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Manage Labels Section */}
-          {onManageLabels && (
-            <div className="border-t border-slate-200 p-3">
+          {/* Action Buttons Section */}
+          <div className="border-t border-slate-200 p-3 space-y-2">
+            {/* Reset All Filters */}
+            {selectedLabels.length > 0 && (
+              <button
+                onClick={resetAllFilters}
+                className="w-full flex items-center justify-center px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
+              >
+                <span className="mr-2">🔄</span>
+                Reset All Filters
+              </button>
+            )}
+            
+            {/* Manage Labels (if provided) */}
+            {onManageLabels && (
               <button
                 onClick={() => {
                   setIsOpen(false);
@@ -242,10 +395,10 @@ export const LabelFilter: React.FC<LabelFilterProps> = ({
                 className="w-full flex items-center justify-center px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
               >
                 <span className="mr-2">⚙️</span>
-                Manage Labels
+                Advanced Label Manager
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

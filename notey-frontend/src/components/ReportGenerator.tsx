@@ -324,7 +324,7 @@ export default function ReportGenerator({ session, concept, onClose, relatedConc
         <div className="bg-gradient-to-r from-notey-orange to-notey-orange/80 px-6 py-4 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white flex items-center">
-              📊 Generate Report
+              <span className="text-base">📊</span> Generate Report
             </h2>
             {onClose && (
               <button

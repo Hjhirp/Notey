@@ -419,7 +419,7 @@ export default function PhotoTimelinePlayer({
                       <div className="p-3 bg-gradient-to-r from-notey-pink/95 to-notey-pink border-t border-notey-pink/20">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                            <span className="text-white text-lg flex-shrink-0">📸</span>
+                            <span className="text-white text-base flex-shrink-0">📸</span>
                             <div className="text-white min-w-0">
                               <p className="text-sm font-semibold leading-tight truncate">
                                 {formatTime(photo.offset_seconds)}
@@ -482,7 +482,7 @@ export default function PhotoTimelinePlayer({
               <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 via-black/60 to-transparent p-4 sm:p-6">
                 <div className="flex items-start justify-between text-white">
                   <div className="flex items-center space-x-3 pr-4">
-                    <span className="text-2xl sm:text-3xl">📸</span>
+                    <span className="text-base">📸</span>
                     <div>
                       <h3 className="font-bold text-lg sm:text-xl leading-tight">Timeline Photo</h3>
                       <p className="text-sm sm:text-base opacity-90 leading-tight">

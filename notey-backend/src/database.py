@@ -89,6 +89,9 @@ async def get_event_details(event_id: str) -> dict:
         photos_data = photo_res.json()
 
     return {
+        "event_id": events[0]["id"],
+        "title": events[0].get("title", "Untitled Event"),
+        "started_at": events[0].get("started_at"),
         "audio_url": audio_chunk["audio_url"] if audio_chunk else None,
         "transcript": audio_chunk["transcript"] if audio_chunk else "",
         "summary": audio_chunk["summary"] if audio_chunk else "",

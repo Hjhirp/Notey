@@ -241,7 +241,6 @@ export const EventLabelAssigner: React.FC<EventLabelAssignerProps> = ({
                   onRemove={() => handleRemoveLabel(label.id)}
                   size="small"
                   variant="default"
-                  showRemoveButton={true}
                 />
               </div>
             ))}

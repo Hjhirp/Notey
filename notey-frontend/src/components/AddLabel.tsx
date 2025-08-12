@@ -149,9 +149,9 @@ export const AddLabel: React.FC<AddLabelProps> = ({
     }
   };
 
-  const canCreate = newLabel.name.trim() && !availableLabels.some(label => 
+  const canCreate: boolean = Boolean(newLabel.name.trim() && !availableLabels.some(label => 
     label.name.toLowerCase() === newLabel.name.trim().toLowerCase()
-  );
+  ));
 
   // Clear all selections (filter mode)
   const clearAllSelections = () => {
@@ -179,7 +179,7 @@ export const AddLabel: React.FC<AddLabelProps> = ({
                   borderColor: `${label.color}30`
                 }}
               >
-                <span>{label.icon}</span>
+                <span>{label.icon === 'tag' ? '🏷️' : label.icon}</span>
                 {label.name}
                 <button
                   aria-label={`Remove label ${label.name}`}
@@ -260,7 +260,7 @@ export const AddLabel: React.FC<AddLabelProps> = ({
                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mr-1 mb-1"
                   style={{ backgroundColor: `${label.color}20`, color: label.color }}
                 >
-                  <span className="mr-1">{label.icon}</span>
+                  <span className="mr-1">{label.icon === 'tag' ? '🏷️' : label.icon}</span>
                   {label.name}
                   <button
                     onClick={(e) => {
@@ -413,7 +413,7 @@ const EventLabelPicker: React.FC<EventLabelPickerProps> = ({
                   className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                   style={{ backgroundColor: `${label.color}20`, color: label.color }}
                 >
-                  <span className="mr-1">{label.icon}</span>
+                  <span className="mr-1">{label.icon === 'tag' ? '🏷️' : label.icon}</span>
                   {label.name}
                 </span>
               </button>
@@ -521,7 +521,7 @@ const FilterLabelPicker: React.FC<FilterLabelPickerProps> = ({
                     borderColor: `${label.color}30`
                   }}
                 >
-                  {label.icon && <span className="mr-1">{label.icon}</span>}
+                  {label.icon && <span className="mr-1">{label.icon === 'tag' ? '🏷️' : label.icon}</span>}
                   {label.name}
                 </span>
               </label>

@@ -11,6 +11,8 @@ import NotesGraph3D from "./components/NotesGraph3D";
 import ReportGenerator from "./components/ReportGenerator";
 import Chatbot from "./components/Chatbot";
 import IntegrationsSettings from "./components/IntegrationsSettings";
+import { ToastProvider } from "./components/ui/Toast";
+import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 import ReactMarkdown from 'react-markdown';
 
@@ -387,57 +389,59 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Enhanced Navbar */}
-      <Navbar 
-        session={session} 
-        setSession={setSession} 
-        onOpenSettings={() => setShowIntegrationsSettings(true)}
-      />
-      
-      {!session ? (
-        /* Landing Page - Notion-like Hero Section */
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-notey-cream/30">
-          <div className="container mx-auto px-6 py-20 max-w-6xl">
-            {/* Hero Section */}
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-notey-orange/10 rounded-2xl mb-8">
-                <img 
-                  src="/notey.png" 
-                  alt="Notey Logo" 
-                  className="w-12 h-12 object-contain"
-                  onError={(e) => {
-                    // Fallback to emoji if logo fails to load
-                    const target = e.target as HTMLImageElement;
-                    target.outerHTML = '<span class="text-4xl">🎙️</span>';
-                  }}
-                />
-              </div>
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
-                Your voice,
-                <br />
-                <span className="text-notey-orange">transcribed & organized</span>
-              </h1>
-              <p className="text-xl sm:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-                Record audio notes, get AI-powered transcriptions and summaries. 
-                Never lose an important thought again.
-              </p>
-            </div>
-
-            {/* Auth Section */}
-            <div className="max-w-md mx-auto">
-              <Auth session={session} setSession={setSession} />
-            </div>
-
-            {/* Features Grid */}
-            <div className="grid md:grid-cols-3 gap-8 mt-20">
-              <div className="text-center p-6">
-                <div className="w-12 h-12 bg-notey-orange/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🎯</span>
+    <ToastProvider>
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+          {/* Enhanced Navbar */}
+          <Navbar 
+            session={session} 
+            setSession={setSession} 
+            onOpenSettings={() => setShowIntegrationsSettings(true)}
+          />
+          
+          {!session ? (
+            /* Landing Page - Notion-like Hero Section */
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-notey-cream/30">
+              <div className="container mx-auto px-6 py-20 max-w-6xl">
+                {/* Hero Section */}
+                <div className="text-center mb-16">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-notey-orange/10 rounded-2xl mb-8">
+                    <img 
+                      src="/notey.png" 
+                      alt="Notey Logo" 
+                      className="w-12 h-12 object-contain"
+                      onError={(e) => {
+                        // Fallback to emoji if logo fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.outerHTML = '<span class="text-4xl">🎙️</span>';
+                      }}
+                    />
+                  </div>
+                  <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight">
+                    Your voice,
+                    <br />
+                    <span className="text-notey-orange">transcribed & organized</span>
+                  </h1>
+                  <p className="text-xl sm:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+                    Record audio notes, get AI-powered transcriptions and summaries. 
+                    Never lose an important thought again.
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">Smart Recording</h3>
-                <p className="text-slate-600">One-click recording with automatic transcription and AI summarization</p>
-              </div>
+
+                {/* Auth Section */}
+                <div className="max-w-md mx-auto mb-16">
+                  <Auth session={session} setSession={setSession} />
+                </div>
+
+                {/* Features Grid */}
+                <div className="grid md:grid-cols-3 gap-8 mt-20">
+                  <div className="text-center p-6">
+                    <div className="w-12 h-12 bg-notey-orange/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl">🎯</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">Smart Recording</h3>
+                    <p className="text-slate-600">One-click recording with automatic transcription and AI summarization</p>
+                  </div>
               <div className="text-center p-6">
                 <div className="w-12 h-12 bg-notey-pink/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">📝</span>
@@ -551,20 +555,6 @@ function App() {
                               
                               {/* Action Buttons */}
                               <div className="absolute top-2 right-2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {/* Generate Report Button */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReportGeneration('', session.id);
-                                  }}
-                                  className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-all"
-                                  title="Generate Report"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                  </svg>
-                                </button>
-                                
                                 {/* Delete Button */}
                                 <button
                                   onClick={(e) => {
@@ -737,7 +727,9 @@ function App() {
       )}
       
       <Analytics />
-    </div>
+        </div>
+      </ErrorBoundary>
+    </ToastProvider>
   );
 }
 

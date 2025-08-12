@@ -41,7 +41,11 @@ export const LabelChip: React.FC<LabelChipProps> = ({
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       <span className="flex items-center gap-1">
-        <i className={`fas fa-${label.icon}`} style={{ color: variant === 'filled' ? 'white' : label.color }} />
+        {label.icon === 'tag' ? (
+          <span>🏷️</span>
+        ) : (
+          <i className={`fas fa-${label.icon}`} style={{ color: variant === 'filled' ? 'white' : label.color }} />
+        )}
         <span>{label.name}</span>
       </span>
       

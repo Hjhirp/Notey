@@ -42,16 +42,17 @@ class OAuthHandler:
             
             if existing:
                 # Update existing tokens
-                response = self.supabase.table("user_integrations").update(token_data).eq("user_id", user_id).eq("provider", provider).execute()
+                filters = {"user_id": f"eq.{user_id}", "provider": f"eq.{provider}"}
+                response = await self.supabase.update("user_integrations", token_data, filters)
             else:
                 # Insert new tokens
-                response = self.supabase.table("user_integrations").insert(token_data).execute()
+                response = await self.supabase.insert("user_integrations", token_data)
             
-            if response.data:
-                logger.info(f"Successfully stored {provider} tokens for user {user_id}")
+            if response:
+                logger.info(f"Successfully stored tokens for user {user_id} and provider {provider}")
                 return True
             else:
-                logger.error(f"Failed to store {provider} tokens for user {user_id}")
+                logger.error(f"Failed to store tokens: {response}")
                 return False
                 
         except Exception as e:
@@ -61,10 +62,11 @@ class OAuthHandler:
     async def get_user_tokens(self, user_id: str, provider: str) -> Optional[Dict[str, Any]]:
         """Retrieve user OAuth tokens from database"""
         try:
-            response = self.supabase.table("user_integrations").select("*").eq("user_id", user_id).eq("provider", provider).execute()
+            filters = {"user_id": f"eq.{user_id}", "provider": f"eq.{provider}"}
+            response = await self.supabase.select("user_integrations", "*", filters)
             
-            if response.data and len(response.data) > 0:
-                token_data = response.data[0]
+            if response and len(response) > 0:
+                token_data = response[0]
                 
                 # Parse scopes back to list
                 if token_data.get("scopes"):
@@ -81,9 +83,10 @@ class OAuthHandler:
     async def delete_user_tokens(self, user_id: str, provider: str) -> bool:
         """Delete user OAuth tokens (for disconnecting integrations)"""
         try:
-            response = self.supabase.table("user_integrations").delete().eq("user_id", user_id).eq("provider", provider).execute()
+            filters = {"user_id": f"eq.{user_id}", "provider": f"eq.{provider}"}
+            response = await self.supabase.delete("user_integrations", filters)
             
-            if response.data:
+            if response:
                 logger.info(f"Successfully deleted {provider} tokens for user {user_id}")
                 return True
             else:
@@ -114,11 +117,12 @@ class OAuthHandler:
     async def get_user_integrations(self, user_id: str) -> Dict[str, Any]:
         """Get all integrations for a user"""
         try:
-            response = self.supabase.table("user_integrations").select("provider, created_at, updated_at").eq("user_id", user_id).execute()
+            filters = {"user_id": f"eq.{user_id}"}
+            response = await self.supabase.select("user_integrations", "provider, created_at, updated_at", filters)
             
             integrations = {}
-            if response.data:
-                for integration in response.data:
+            if response:
+                for integration in response:
                     integrations[integration["provider"]] = {
                         "connected": True,
                         "connected_at": integration["created_at"],

@@ -62,9 +62,9 @@ export const LabelCreation: React.FC<LabelCreationProps> = ({
   };
 
   // Check for duplicate names
-  const isDuplicate = newLabel.name.trim() && availableLabels.some(label => 
+  const isDuplicate: boolean = Boolean(newLabel.name.trim() && availableLabels.some(label => 
     label.name.toLowerCase() === newLabel.name.trim().toLowerCase()
-  );
+  ));
 
   return (
     <div 
@@ -126,7 +126,7 @@ export const LabelCreation: React.FC<LabelCreationProps> = ({
         {newLabel.name.trim() && !shouldExpand && (
           <button
             onClick={handleCreate}
-            disabled={!canCreate || isLoading || isDuplicate}
+            disabled={!Boolean(canCreate) || isLoading || isDuplicate}
             className="flex-shrink-0 px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isLoading ? '...' : '+'}
@@ -191,7 +191,7 @@ export const LabelCreation: React.FC<LabelCreationProps> = ({
           <div className="flex gap-2">
             <button
               onClick={handleCreate}
-              disabled={!canCreate || isLoading || isDuplicate}
+              disabled={!Boolean(canCreate) || isLoading || isDuplicate}
               className="flex-1 h-8 px-3 text-sm bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {isLoading ? 'Creating...' : 'Create'}
@@ -208,7 +208,7 @@ export const LabelCreation: React.FC<LabelCreationProps> = ({
       </div>
 
       {/* Mobile-Specific Styles */}
-      <style jsx>{`
+      <style>{`
         @media (max-width: 640px) {
           .scrollbar-hide {
             scrollbar-width: none;

@@ -4,6 +4,7 @@ import config from "../config";
 import { LabelFilter } from "./LabelFilter";
 import { Label } from "../types/labels";
 import { labelsApi } from "../lib/labelsApi";
+import { EventExporter } from "../utils/eventExporter";
 
 const BACKEND_URL = config.BACKEND_URL;
 
@@ -278,6 +279,9 @@ export default function Events({
   const [showBulkLabelAssigner, setShowBulkLabelAssigner] = useState(false);
   const [availableLabels, setAvailableLabels] = useState<Label[]>([]);
   const [openLabelFor, setOpenLabelFor] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [exportType, setExportType] = useState<'pdf' | 'google-docs' | null>(null);
+  const [showExportPopup, setShowExportPopup] = useState<string | null>(null);
   const [creatingLabelFor, setCreatingLabelFor] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState({ name: "", color: "#FF6A00", icon: "" });
   const [pickerSelection, setPickerSelection] = useState<Record<string, Set<string>>>({});
@@ -463,6 +467,44 @@ export default function Events({
     fetchEvents();
   }, [session]);
 
+  // Listen for label deletion events to refresh events
+  useEffect(() => {
+    const handleLabelDeleted = (event: CustomEvent) => {
+      const { labelId } = event.detail;
+      
+      // Remove the deleted label from all events in state
+      setEvents(prevEvents => 
+        prevEvents.map(event => ({
+          ...event,
+          labels: event.labels?.filter(label => label.id !== labelId) || []
+        }))
+      );
+      
+      // Also remove from available labels
+      setAvailableLabels(prev => prev.filter(label => label.id !== labelId));
+    };
+
+    window.addEventListener('labelDeleted', handleLabelDeleted as EventListener);
+    
+    return () => {
+      window.removeEventListener('labelDeleted', handleLabelDeleted as EventListener);
+    };
+  }, []);
+
+  // Close export popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showExportPopup && !(event.target as Element).closest('.export-popup-container')) {
+        setShowExportPopup(null);
+      }
+    };
+
+    if (showExportPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showExportPopup]);
+
   const deleteEvent = async (eventId: string) => {
     if (!session?.access_token) return;
     
@@ -496,6 +538,70 @@ export default function Events({
     }
   };
 
+  const handleExportToPDF = async (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation();
+    if (!session?.access_token) return;
+    
+    setExportingId(eventId);
+    setExportType('pdf');
+    
+    try {
+      // Fetch event details for export
+      const eventData = await EventExporter.fetchEventDetails(eventId, session.access_token);
+      
+      // Export to PDF using existing report generator
+      await EventExporter.exportEventToPDF(eventData);
+      
+    } catch (err) {
+      console.error('Failed to export event to PDF:', err);
+      setError(err instanceof Error ? err.message : 'Failed to export event to PDF');
+    } finally {
+      setExportingId(null);
+      setExportType(null);
+    }
+  };
+
+  const handleExportToGoogleDocs = async (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation();
+    if (!session?.access_token) return;
+    
+    setExportingId(eventId);
+    setExportType('google-docs');
+    
+    try {
+      const documentUrl = await EventExporter.exportEventToGoogleDocs(eventId, session.access_token);
+      
+      // Open the Google Doc in a new tab
+      window.open(documentUrl, '_blank');
+      
+    } catch (err) {
+      console.error('Failed to export event to Google Docs:', err);
+      setError(err instanceof Error ? err.message : 'Failed to export event to Google Docs');
+    } finally {
+      setExportingId(null);
+      setExportType(null);
+    }
+  };
+
+  const handleExportClick = (e: React.MouseEvent, eventId: string) => {
+    e.stopPropagation();
+    setShowExportPopup(eventId);
+  };
+
+  const closeExportPopup = () => {
+    setShowExportPopup(null);
+  };
+
+  const handleExportOption = async (eventId: string, exportType: 'pdf' | 'google-docs') => {
+    setShowExportPopup(null);
+    
+    if (exportType === 'pdf') {
+      await handleExportToPDF({ stopPropagation: () => {} } as React.MouseEvent, eventId);
+    } else {
+      await handleExportToGoogleDocs({ stopPropagation: () => {} } as React.MouseEvent, eventId);
+    }
+  };
+
   const handleDeleteClick = (e: React.MouseEvent, eventId: string) => {
     e.stopPropagation();
     setShowDeleteConfirm(eventId);
@@ -511,14 +617,17 @@ export default function Events({
     ));
   };
 
-  const togglePicker = (eventId: string) => {
-    setOpenLabelFor(current => current === eventId ? null : eventId);
+  const toggleLabelPicker = (eventId: string) => {
+    setOpenLabelFor(current => {
+      const newValue = current === eventId ? null : eventId;
+      // Initialize picker selection for this event
+      if (newValue === eventId) {
+        setPickerSelection(prev => ({ ...prev, [eventId]: new Set() }));
+      }
+      return newValue;
+    });
     setCreatingLabelFor(null);
     setInlineError(null);
-    // Initialize picker selection for this event
-    if (current !== eventId) {
-      setPickerSelection(prev => ({ ...prev, [eventId]: new Set() }));
-    }
   };
 
   const updateEventLabelsInState = (eventId: string, nextLabels: Label[]) => {
@@ -558,7 +667,7 @@ export default function Events({
       const created = await labelsApi.createLabel({
         name: newLabel.name.trim(),
         color: newLabel.color,
-        icon: newLabel.icon.trim() || undefined
+        icon: newLabel.icon.trim() || ''
       }, session);
 
       // Update available labels in state
@@ -568,16 +677,25 @@ export default function Events({
       const currentEvent = events.find(e => e.id === eventId);
       const currentLabels = currentEvent?.labels || [];
 
-      // Auto-apply: attach the new label to the event
-      await labelsApi.attachLabel(created.id, 'event', eventId, session);
-      
-      // Update event labels optimistically
-      updateEventLabelsInState(eventId, [...currentLabels, created]);
-
-      // Close create form and picker
+      // Close create form and picker first (label creation was successful)
       setCreatingLabelFor(null);
       setOpenLabelFor(null);
       setNewLabel({ name: "", color: "#FF6A00", icon: "" });
+
+      // Try to auto-apply: attach the new label to the event
+      try {
+        if (created && created.id) {
+          await labelsApi.attachLabel(created.id, 'event', eventId, session);
+          // Update event labels optimistically only if attachment succeeds
+          updateEventLabelsInState(eventId, [...currentLabels, created]);
+        } else {
+          console.warn('Created label does not have a valid ID, skipping attachment');
+        }
+      } catch (attachError) {
+        console.error('Failed to attach newly created label:', attachError);
+        // Don't show error to user since label creation was successful
+        // User can manually attach the label if needed
+      }
 
     } catch (error) {
       setInlineError('Failed to create label. Please try again.');
@@ -741,7 +859,7 @@ export default function Events({
           </div>
         ) : filteredAndSortedEvents.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-6xl mb-6">📝</div>
+            <div className="text-4xl mb-6">📝</div>
             <h3 className="text-lg font-medium text-slate-900 mb-2">
               {searchQuery ? 'No events match your search' : selectedLabels.length > 0 ? 'No events match selected labels' : 'No events yet'}
             </h3>
@@ -810,6 +928,52 @@ export default function Events({
 
                           {/* Action Buttons */}
                           <div className="flex items-center gap-1.5">
+                            {/* Combined Export Button */}
+                            <div className="relative export-popup-container">
+                              <button
+                                onClick={(e) => handleExportClick(e, event.id)}
+                                disabled={exportingId === event.id}
+                                className="h-8 w-8 rounded-full border border-slate-300 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 flex items-center justify-center transition-colors disabled:opacity-50"
+                                title="Export Event"
+                                aria-label="Export event"
+                              >
+                                {exportingId === event.id ? (
+                                  <div className="animate-spin w-4 h-4 border border-slate-400 border-t-transparent rounded-full"></div>
+                                ) : (
+                                  <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                )}
+                              </button>
+
+                              {/* Export Options Popup */}
+                              {showExportPopup === event.id && (
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-50 min-w-[160px]">
+                                  <div className="py-1">
+                                    <button
+                                      onClick={() => handleExportOption(event.id, 'pdf')}
+                                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      Export as PDF
+                                    </button>
+                                    <button
+                                      onClick={() => handleExportOption(event.id, 'google-docs')}
+                                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      Export to Google Docs
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Delete Button */}
                             <button
                               onClick={(e) => handleDeleteClick(e, event.id)}
                               disabled={deletingId === event.id}
@@ -844,7 +1008,7 @@ export default function Events({
                                   className="group relative inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border"
                                   style={{ backgroundColor: `${label.color}15`, color: label.color, borderColor: `${label.color}30` }}
                                 >
-                                  <span>{label.icon}</span>
+                                  <span>{label.icon === 'tag' ? '🏷️' : label.icon}</span>
                                   {label.name}
                                   <button
                                     aria-label={`Remove label ${label.name}`}
@@ -865,11 +1029,11 @@ export default function Events({
 
                             {/* Add Label pill — inline with chips */}
                             <button
-                              onClick={() => togglePicker(event.id)}
+                              onClick={() => toggleLabelPicker(event.id)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault();
-                                  togglePicker(event.id);
+                                  toggleLabelPicker(event.id);
                                 }
                               }}
                               className="inline-flex items-center gap-1 rounded-full border border-orange-400 text-orange-600 text-xs md:text-sm font-medium px-3 py-1 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
