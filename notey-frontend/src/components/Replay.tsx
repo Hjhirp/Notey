@@ -218,17 +218,22 @@ export default function Replay({
       <div className="card-header">
         <div className="flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-bold text-white flex items-center">
-            🎧 Event Replay
+            <span className="text-lg">🎧</span> Event Replay
           </h2>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg"
-            title="Delete this event"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
+          <DownloadMenu
+            eventId={eventId}
+            audioUrl={timelineData?.audio?.url || audioChunks[0]?.audio_url || eventData?.audio_url || ''}
+            photos={timelineData?.photos?.map(p => ({
+              id: p.id,
+              url: p.url,
+              filename: `photo-${p.offset.toFixed(1)}s.jpg`
+            })) || eventData?.photos?.map(p => ({
+              id: p.id || `photo-${p.offset_seconds}`,
+              url: p.photo_url,
+              filename: `photo-${p.offset_seconds.toFixed(1)}s.jpg`
+            })) || []}
+            eventTitle={timelineData?.event?.title || `Event ${eventId.split('-')[0]}`}
+          />
         </div>
       </div>
 
@@ -254,23 +259,7 @@ export default function Replay({
               className="mb-6"
             />
             
-            {/* Download Menu */}
-            <div className="flex justify-end">
-              <DownloadMenu
-                eventId={eventId}
-                audioUrl={timelineData?.audio?.url || audioChunks[0]?.audio_url || eventData?.audio_url || ''}
-                photos={timelineData?.photos?.map(p => ({
-                  id: p.id,
-                  url: p.url,
-                  filename: `photo-${p.offset.toFixed(1)}s.jpg`
-                })) || eventData?.photos?.map(p => ({
-                  id: p.id || `photo-${p.offset_seconds}`,
-                  url: p.photo_url,
-                  filename: `photo-${p.offset_seconds.toFixed(1)}s.jpg`
-                })) || []}
-                eventTitle={timelineData?.event?.title || `Event ${eventId.split('-')[0]}`}
-              />
-            </div>
+
           </div>
         ) : (
           /* Fallback to Legacy Components */
@@ -372,7 +361,7 @@ export default function Replay({
                   </div>
                   <div className="p-3 sm:p-4 bg-gradient-to-r from-notey-pink/80 to-notey-pink">
                     <p className="text-white text-xs sm:text-sm font-medium">
-                      📸 Taken at {photo.offset_seconds?.toFixed(1) || "?"} seconds
+                      <span className="text-sm">📸</span> Taken at {photo.offset_seconds?.toFixed(1) || "?"} seconds
                     </p>
                   </div>
                 </div>
@@ -380,7 +369,7 @@ export default function Replay({
             </div>
           ) : (
             <div className="p-6 sm:p-8 text-center bg-notey-cream/30">
-              <div className="text-4xl sm:text-5xl mb-4">📷</div>
+              <div className="text-4xl mb-4">📷</div>
               <p className="text-notey-brown italic text-sm sm:text-base">No photos captured for this event.</p>
             </div>
           )}
@@ -465,7 +454,7 @@ export default function Replay({
                 <div className="flex items-center justify-between text-white">
                   <div>
                     <h3 className="text-lg sm:text-xl font-semibold">
-                      📸 Photo from Event
+                      <span className="text-base">📸</span> Photo from Event
                     </h3>
                     <p className="text-white/90 text-sm sm:text-base mt-1">
                       Captured at {selectedGalleryPhoto.offset_seconds?.toFixed(1) || "unknown"} seconds

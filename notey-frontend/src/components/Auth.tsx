@@ -3,6 +3,9 @@ import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import TermsAndConditions from "./TermsAndConditions";
 import PrivacyPolicy from "./PrivacyPolicy";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Card, CardHeader, CardContent } from "./ui/Card";
 
 interface AuthProps {
   session: Session | null;
@@ -58,40 +61,35 @@ export default function Auth({ session }: AuthProps) {
 
   if (!session) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-200">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Get started with Notey</h2>
-          <p className="text-slate-600">Sign in to start recording and organizing your audio notes</p>
-        </div>
-        
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white text-slate-900 placeholder-slate-500 text-base
-                         focus:outline-none focus:ring-2 focus:ring-notey-orange focus:border-transparent
-                         transition-all duration-200"
-            />
+      <Card className="max-w-md mx-auto shadow-xl">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-notey-orange to-notey-pink rounded-2xl flex items-center justify-center shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
           </div>
-          
-          {/* Error message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-              {error}
-            </div>
-          )}
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to Notey</h2>
+          <p className="text-slate-600">Sign in to start recording and organizing your audio notes with AI</p>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          <Input
+            type="email"
+            label="Email address"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={error && !message ? error : undefined}
+            helperText="We'll send you a secure login link"
+          />
           
           {/* Success message */}
           {message && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
-              {message}
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center space-x-2">
+              <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>{message}</span>
             </div>
           )}
 
@@ -118,7 +116,6 @@ export default function Auth({ session }: AuthProps) {
                 </label>
               </div>
             </div>
-
             <div className="flex items-start space-x-3">
               <input
                 type="checkbox"
@@ -142,24 +139,16 @@ export default function Auth({ session }: AuthProps) {
             </div>
           </div>
           
-          <button
+          <Button
             onClick={signIn}
             disabled={isLoading || !email.trim() || !acceptedTerms || !acceptedPrivacy}
-            className="w-full bg-notey-orange text-white font-semibold py-3 px-6 rounded-xl text-base
-                       hover:bg-notey-orange/90 focus:outline-none focus:ring-2 focus:ring-notey-orange focus:ring-offset-2
-                       transition-all duration-200 shadow-sm min-h-[48px] touch-manipulation
-                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            isLoading={isLoading}
+            className="w-full"
+            size="lg"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Sending magic link...
-              </>
-            ) : (
-              "Continue with Email"
-            )}
-          </button>
-        </div>
+            {isLoading ? "Sending magic link..." : "Continue with Email"}
+          </Button>
+        </CardContent>
         
         {/* Terms and Conditions Modal */}
         <TermsAndConditions 
@@ -172,7 +161,7 @@ export default function Auth({ session }: AuthProps) {
           isOpen={showPrivacy} 
           onClose={() => setShowPrivacy(false)} 
         />
-      </div>
+      </Card>
     );
   }
 

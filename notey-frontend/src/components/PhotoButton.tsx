@@ -276,7 +276,7 @@ export default function PhotoButton({
           </div>
           <div class="flex space-x-3">
             <button id="capture-btn" class="flex-1 bg-notey-orange text-notey-brown px-4 py-3 rounded-md font-medium hover:bg-notey-orange/90 transition-colors flex items-center justify-center">
-              <span class="mr-2">📸</span>
+              <span class="mr-2 text-base">📸</span>
               Capture
             </button>
             <button id="cancel-btn" class="flex-1 bg-gray-200 text-gray-700 px-4 py-3 rounded-md font-medium hover:bg-gray-300 transition-colors">
@@ -406,7 +406,7 @@ export default function PhotoButton({
 
     return (
       <>
-        <span className="mr-2">📸</span>
+        <span className="mr-2 text-base">📸</span>
         Take Photo
       </>
     );

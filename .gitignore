@@ -350,3 +350,6 @@ whisper.cpp/models/
 
 # Kiro
 .kiro
+
+# Claude
+.claude

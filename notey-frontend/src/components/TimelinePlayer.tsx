@@ -323,7 +323,7 @@ export default function TimelinePlayer({
         {sortedPhotos.length > 0 && (
           <div className="mb-4">
             <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center">
-              <span className="mr-2">📸</span>
+              <span className="mr-2 text-base">📸</span>
               Photos Timeline ({sortedPhotos.length})
             </h3>
             
@@ -371,7 +371,7 @@ export default function TimelinePlayer({
                     }`}>
                       <div className="text-xs text-white font-medium flex items-center justify-between">
                         <span>{formatTime(photo.offset)}</span>
-                        {isUpcoming && <span className="text-yellow-200">📸</span>}
+                        {isUpcoming && <span className="text-yellow-200 text-base">📸</span>}
                       </div>
                     </div>
                     
@@ -390,7 +390,7 @@ export default function TimelinePlayer({
         {transcript.length > 0 && activeTranscriptSegment && (
           <div className="bg-slate-50 rounded-lg p-4">
             <h3 className="text-sm font-medium text-slate-700 mb-2 flex items-center">
-              <span className="mr-2">📝</span>
+              <span className="mr-2 text-base">📝</span>
               Transcript
             </h3>
             
@@ -457,7 +457,7 @@ export default function TimelinePlayer({
             <div className="p-3 bg-gradient-to-r from-orange-500 to-orange-600">
               <div className="text-white">
                 <p className="font-semibold text-sm">
-                  📸 {formatTime(autoPopupPhoto.offset)}
+                  <span className="text-base">📸</span> {formatTime(autoPopupPhoto.offset)}
                 </p>
                 {autoPopupPhoto.caption && (
                   <p className="text-xs opacity-90 mt-1 line-clamp-2">

@@ -2,11 +2,15 @@ import os
 import requests
 import httpx
 import time
+import logging
 from fastapi import HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from .summarizer import summarize_transcript
 from .concept_extractor import extract_concepts_from_transcript
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -399,4 +403,5 @@ async def upsert_concepts_for_chunk(chunk_id: str, concepts: list):
     except Exception as e:
         # Don't fail the entire pipeline if concept upsert fails
         # Just log and continue
-        pass
+        print(f"⚠️ Error upserting concepts for chunk {chunk_id}: {e}")
+        logger.error(f"Error upserting concepts for chunk {chunk_id}: {e}")

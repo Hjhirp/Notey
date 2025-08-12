@@ -89,6 +89,9 @@ async def get_event_details(event_id: str) -> dict:
         photos_data = photo_res.json()
 
     return {
+        "event_id": events[0]["id"],
+        "title": events[0].get("title", "Untitled Event"),
+        "started_at": events[0].get("started_at"),
         "audio_url": audio_chunk["audio_url"] if audio_chunk else None,
         "transcript": audio_chunk["transcript"] if audio_chunk else "",
         "summary": audio_chunk["summary"] if audio_chunk else "",
@@ -313,3 +316,222 @@ async def delete_event_storage_files_with_user_token(event_id: str, user_context
         
     except Exception as e:
         return False
+
+# Labels functionality
+async def create_label(label_data: dict) -> dict:
+    """Create a new label in the database"""
+    async with httpx.AsyncClient() as client:
+        res = await client.post(
+            f"{SUPABASE_URL}/rest/v1/labels",
+            headers={**get_supabase_headers(), "Prefer": "return=representation"},
+            json=label_data
+        )
+        res.raise_for_status()
+        return res.json()
+
+
+async def get_user_labels(user_id: str) -> list:
+    """Get all labels for a user"""
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            f"{SUPABASE_URL}/rest/v1/labels?user_id=eq.{user_id}&order=name.asc",
+            headers=get_supabase_headers_read()
+        )
+        res.raise_for_status()
+        return res.json()
+
+
+async def update_label(label_id: str, user_id: str, update_data: dict) -> dict:
+    """Update an existing label"""
+    async with httpx.AsyncClient() as client:
+        res = await client.patch(
+            f"{SUPABASE_URL}/rest/v1/labels?id=eq.{label_id}&user_id=eq.{user_id}",
+            headers={**get_supabase_headers(), "Prefer": "return=representation"},
+            json=update_data
+        )
+        res.raise_for_status()
+        result = res.json()
+        return result[0] if result else None
+
+
+async def delete_label(label_id: str, user_id: str) -> bool:
+    """Delete a label and all its associations"""
+    async with httpx.AsyncClient() as client:
+        # First delete all label links
+        await client.delete(
+            f"{SUPABASE_URL}/rest/v1/label_links?label_id=eq.{label_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers()
+        )
+        
+        # Then delete the label
+        res = await client.delete(
+            f"{SUPABASE_URL}/rest/v1/labels?id=eq.{label_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers()
+        )
+        return res.status_code == 204
+
+
+async def verify_label_ownership(label_id: str, user_id: str) -> bool:
+    """Verify that a label belongs to the user"""
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            f"{SUPABASE_URL}/rest/v1/labels?id=eq.{label_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers_read()
+        )
+        res.raise_for_status()
+        return len(res.json()) > 0
+
+
+async def attach_label_to_entity(label_id: str, entity_type: str, entity_id: str, user_id: str) -> dict:
+    """Attach a label to an entity"""
+    async with httpx.AsyncClient() as client:
+        label_link_data = {
+            "user_id": user_id,
+            "label_id": label_id,
+            "entity_type": entity_type,
+            "entity_id": entity_id
+        }
+        res = await client.post(
+            f"{SUPABASE_URL}/rest/v1/label_links",
+            headers={**get_supabase_headers(), "Prefer": "return=representation"},
+            json=label_link_data
+        )
+        res.raise_for_status()
+        return res.json()
+
+
+async def detach_label_from_entity(label_id: str, entity_type: str, entity_id: str, user_id: str) -> bool:
+    """Detach a label from an entity"""
+    async with httpx.AsyncClient() as client:
+        res = await client.delete(
+            f"{SUPABASE_URL}/rest/v1/label_links?label_id=eq.{label_id}&entity_type=eq.{entity_type}&entity_id=eq.{entity_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers()
+        )
+        return res.status_code == 204
+
+
+async def verify_entity_exists_and_ownership(entity_type: str, entity_id: str, user_id: str) -> bool:
+    """Verify that an entity exists and belongs to the user"""
+    async with httpx.AsyncClient() as client:
+        if entity_type == "event":
+            res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/events?id=eq.{entity_id}&user_id=eq.{user_id}",
+                headers=get_supabase_headers_read()
+            )
+        elif entity_type == "audio_chunk":
+            res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/audio_chunks?id=eq.{entity_id}",
+                headers=get_supabase_headers_read()
+            )
+            if res.status_code == 200 and res.json():
+                # Check if the audio chunk belongs to an event owned by the user
+                audio_chunk = res.json()[0]
+                event_res = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/events?id=eq.{audio_chunk['event_id']}&user_id=eq.{user_id}",
+                    headers=get_supabase_headers_read()
+                )
+                return event_res.status_code == 200 and len(event_res.json()) > 0
+            return False
+        elif entity_type == "photo":
+            res = await client.get(
+                f"{SUPABASE_URL}/rest/v1/photos?id=eq.{entity_id}",
+                headers=get_supabase_headers_read()
+            )
+            if res.status_code == 200 and res.json():
+                # Check if the photo belongs to an event owned by the user
+                photo = res.json()[0]
+                event_res = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/events?id=eq.{photo['event_id']}&user_id=eq.{user_id}",
+                    headers=get_supabase_headers_read()
+                )
+                return event_res.status_code == 200 and len(event_res.json()) > 0
+            return False
+        else:
+            return False
+        
+        res.raise_for_status()
+        return len(res.json()) > 0
+
+
+async def bulk_attach_labels_to_entities(label_ids: list, entity_type: str, entity_ids: list, user_id: str) -> dict:
+    """Bulk attach multiple labels to multiple entities"""
+    created = 0
+    errors = []
+    
+    for label_id in label_ids:
+        for entity_id in entity_ids:
+            try:
+                await attach_label_to_entity(label_id, entity_type, entity_id, user_id)
+                created += 1
+            except Exception as e:
+                errors.append(f"Failed to attach label {label_id} to {entity_type} {entity_id}: {str(e)}")
+    
+    return {
+        "created": created,
+        "requested": len(label_ids) * len(entity_ids),
+        "errors": errors
+    }
+
+
+async def bulk_detach_labels_from_entities(label_ids: list, entity_type: str, entity_ids: list, user_id: str) -> dict:
+    """Bulk detach multiple labels from multiple entities"""
+    removed = 0
+    errors = []
+    
+    for label_id in label_ids:
+        for entity_id in entity_ids:
+            try:
+                success = await detach_label_from_entity(label_id, entity_type, entity_id, user_id)
+                if success:
+                    removed += 1
+            except Exception as e:
+                errors.append(f"Failed to detach label {label_id} from {entity_type} {entity_id}: {str(e)}")
+    
+    return {
+        "removed": removed,
+        "errors": errors
+    }
+
+
+async def verify_event_exists_and_ownership(event_id: str, user_id: str) -> bool:
+    """Verify that an event exists and belongs to the user"""
+    async with httpx.AsyncClient() as client:
+        res = await client.get(
+            f"{SUPABASE_URL}/rest/v1/events?id=eq.{event_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers_read()
+        )
+        res.raise_for_status()
+        return len(res.json()) > 0
+
+
+async def get_entity_labels(entity_type: str, entity_id: str, user_id: str) -> list:
+    """Get all labels attached to a specific entity"""
+    async with httpx.AsyncClient() as client:
+        # Get label links for the entity
+        res = await client.get(
+            f"{SUPABASE_URL}/rest/v1/label_links?entity_type=eq.{entity_type}&entity_id=eq.{entity_id}&user_id=eq.{user_id}",
+            headers=get_supabase_headers_read()
+        )
+        res.raise_for_status()
+        label_links = res.json()
+        
+        if not label_links:
+            return []
+        
+        # Get the actual label details for each label link (remove duplicates)
+        unique_label_ids = list(set([link['label_id'] for link in label_links]))
+        label_ids_str = ','.join([f'"{lid}"' for lid in unique_label_ids])
+        
+        labels_res = await client.get(
+            f"{SUPABASE_URL}/rest/v1/labels?id=in.({label_ids_str})&user_id=eq.{user_id}",
+            headers=get_supabase_headers_read()
+        )
+        labels_res.raise_for_status()
+        labels_data = labels_res.json()
+        
+        # Ensure uniqueness based on label ID (extra safety)
+        unique_labels = {}
+        for label in labels_data:
+            unique_labels[label['id']] = label
+        
+        return list(unique_labels.values())

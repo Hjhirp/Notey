@@ -112,17 +112,95 @@ export class ReportGenerator {
     });
   }
 
-  private addPhotoPlaceholder(photoCount: number) {
-    if (photoCount === 0) return;
+  private async addPhotos(photos: { id: string; url: string; offset_seconds: number }[]) {
+    if (photos.length === 0) {
+      this.checkPageBreak(20);
+      this.pdf.setFontSize(10);
+      this.pdf.setTextColor(128, 128, 128);
+      this.pdf.setFont('helvetica', 'italic');
+      this.pdf.text('No photos captured during this event', this.margin, this.yPosition);
+      this.yPosition += 15;
+      return;
+    }
 
+    // Add photos section header
     this.checkPageBreak(20);
     this.pdf.setFontSize(10);
     this.pdf.setTextColor(128, 128, 128);
     this.pdf.setFont('helvetica', 'italic');
-    
-    const photoText = photoCount === 1 ? '1 photo captured' : `${photoCount} photos captured`;
-    this.pdf.text(`[PHOTO] ${photoText} during this event`, this.margin, this.yPosition);
+    const photoText = photos.length === 1 ? '1 photo captured' : `${photos.length} photos captured`;
+    this.pdf.text(`${photoText} during this event:`, this.margin, this.yPosition);
     this.yPosition += 15;
+
+    // Embed each photo
+    for (const photo of photos) {
+      try {
+        await this.embedPhoto(photo);
+      } catch (error) {
+        console.error('Failed to embed photo:', error);
+        // Fallback to text placeholder
+        this.checkPageBreak(15);
+        this.pdf.setFontSize(10);
+        this.pdf.setTextColor(128, 128, 128);
+        this.pdf.setFont('helvetica', 'italic');
+        this.pdf.text(`[PHOTO ERROR] Photo at ${Math.floor(photo.offset_seconds)}s (failed to load)`, this.margin, this.yPosition);
+        this.yPosition += 15;
+      }
+    }
+  }
+
+  private async embedPhoto(photo: { id: string; url: string; offset_seconds: number }) {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        try {
+          // Calculate image dimensions to fit on page
+          const maxWidth = this.pageWidth - 2 * this.margin;
+          const maxHeight = 100; // Max height for each photo
+          
+          let width = img.width;
+          let height = img.height;
+          
+          // Scale down if too large
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+
+          // Check if we need a page break for the photo
+          this.checkPageBreak(height + 20);
+
+          // Add photo timestamp
+          this.pdf.setFontSize(8);
+          this.pdf.setTextColor(128, 128, 128);
+          this.pdf.setFont('helvetica', 'normal');
+          const timeText = `Photo at ${Math.floor(photo.offset_seconds)}s`;
+          this.pdf.text(timeText, this.margin, this.yPosition);
+          this.yPosition += 10;
+
+          // Add the image
+          this.pdf.addImage(img, 'JPEG', this.margin, this.yPosition, width, height);
+          this.yPosition += height + 10;
+          
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = photo.url;
+    });
   }
 
   async generateReport(data: ReportData): Promise<Blob> {
@@ -163,7 +241,8 @@ export class ReportGenerator {
     this.addParagraph(`This report covers ${data.events.length} event${data.events.length !== 1 ? 's' : ''} related to "${data.concept}".`);
 
     // Add each event
-    data.events.forEach((event, index) => {
+    for (let index = 0; index < data.events.length; index++) {
+      const event = data.events[index];
       this.yPosition += 10;
       
       // Event header
@@ -197,14 +276,14 @@ export class ReportGenerator {
       this.pdf.text('Photos:', this.margin, this.yPosition);
       this.yPosition += 15;
 
-      this.addPhotoPlaceholder(event.photos.length);
+      await this.addPhotos(event.photos);
 
       // Add separator between events (except for the last one)
       if (index < data.events.length - 1) {
         this.yPosition += 10;
         this.addDivider();
       }
-    });
+    }
 
     // Footer
     this.yPosition = this.pageHeight - 30;

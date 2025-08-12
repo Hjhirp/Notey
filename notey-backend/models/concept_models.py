@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from uuid import UUID
 
@@ -10,7 +10,7 @@ class ConceptMention(BaseModel):
     from_sec: Optional[float] = Field(None, ge=0)
     to_sec: Optional[float] = Field(None, ge=0)
     
-    @validator('name')
+    @field_validator('name')
     def validate_name(cls, v):
         # Normalize concept name: lowercase, strip whitespace, remove quotes
         normalized = v.lower().strip().replace('"', '').replace("'", "")
@@ -18,7 +18,7 @@ class ConceptMention(BaseModel):
             raise ValueError("Concept name cannot be empty after normalization")
         return normalized
     
-    @validator('to_sec')
+    @field_validator('to_sec')
     def validate_time_range(cls, v, values):
         if v is not None and 'from_sec' in values and values['from_sec'] is not None:
             if v <= values['from_sec']:
@@ -31,7 +31,7 @@ class ConceptUpsertRequest(BaseModel):
     chunk_id: UUID
     mentions: List[ConceptMention] = Field(..., max_items=20)
     
-    @validator('mentions')
+    @field_validator('mentions')
     def validate_mentions(cls, v):
         if not v:
             raise ValueError("At least one mention is required")
