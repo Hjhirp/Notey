@@ -41,9 +41,9 @@ Notey is a comprehensive audio note-taking platform that enables users to:
 │   - Replay      │    │   - AI Summary  │    │   - File I/O    │
 │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       
-         │                       │                       
-         ▼                       ▼                       
+         │            |         │                       
+         │          |           │                       
+         ▼        ▼             ▼                       
 ┌─────────────────┐    ┌─────────────────┐              
 │                 │    │                 │              
 │   Supabase      │    │   Google        │              
