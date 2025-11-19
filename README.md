@@ -35,9 +35,9 @@ Notey is a comprehensive audio note-taking platform that enables users to:
 │   React Web     │    │   FastAPI       │    │   Whisper.cpp   │
 │   Frontend      │◄──►│   Backend       │◄──►│   Service       │
 │                 │    │                 │    │   (Fly.io)      │
-│   - Recording   │    │   - API Routes  │    │                 │
+│   - Recording   │    │   - API Routes  │    │   /Assembly     │
 │   - Photo Cap   │    │   - Auth        │    │   - Audio       │
-│   - Timeline    │    │   - Storage     │    │     Transcription│
+│   - Timeline    │    │   - Storage     │    │    Transcription│
 │   - Replay      │    │   - AI Summary  │    │   - File I/O    │
 │                 │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
